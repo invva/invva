@@ -1,6 +1,6 @@
 # Invva
 
-> Open source inventory management for small businesses
+> Simplifying inventory managment
 
 **Simple. Fast. Free to self-host.**
 
