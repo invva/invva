@@ -155,7 +155,7 @@ export default function Home() {
             marginTop: "2rem"
           }}
         >
-          <a
+          {/* <a
             href="/login"
             style={{
               color: "#667eea",
@@ -182,7 +182,7 @@ export default function Home() {
             }}
           >
             Sign In / Start Trial
-          </a>
+          </a> */}
 
           <a
             href="https://github.com/invva/invva"
