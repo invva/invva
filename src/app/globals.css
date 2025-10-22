@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 1s ease-in;
+  }
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .logo-container {
+    padding: 30px 40px !important;
+  }
+
+  .logo-container img {
+    max-width: 220px !important;
+  }
+
+  .tagline {
+    font-size: 1.4rem !important;
+  }
+
+  .status {
+    padding: 1.5rem !important;
+  }
+
+  .features {
+    grid-template-columns: 1fr !important;
+  }
+
+  .cta {
+    flex-direction: column !important;
+  }
+
+  .cta a {
+    width: 100% !important;
+  }
+}

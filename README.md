@@ -17,7 +17,7 @@ Invva is an open-source inventory management system designed for small retail sh
 ### Planned Features
 
 - ✅ Simple Product Management
-- ✅ Stock Tracking  
+- ✅ Stock Tracking
 - ✅ Barcode Scanning
 - ✅ Real-time Updates
 - ✅ Mobile-First Design
