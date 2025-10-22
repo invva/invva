@@ -32,6 +32,7 @@ export default function LoginPage() {
         setError(data.error || "Something went wrong")
       }
     } catch (err) {
+      console.error("Network error:", err)
       setError("Network error. Please try again.")
     } finally {
       setLoading(false)
@@ -209,7 +210,7 @@ export default function LoginPage() {
               color: "#6b7280"
             }}
           >
-            No password needed. We'll email you a magic link.
+            No password needed. We&apos;ll email you a magic link.
           </p>
         </div>
 

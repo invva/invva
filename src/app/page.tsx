@@ -104,8 +104,8 @@ export default function Home() {
               marginBottom: "2rem"
             }}
           >
-            We're building an open-source inventory management system that's actually simple to use. No complexity, no
-            bloat—just the features small businesses need.
+            We&apos;re building an open-source inventory management system that&apos;s actually simple to use. No
+            complexity, no bloat—just the features small businesses need.
           </p>
 
           {/* Features Grid */}

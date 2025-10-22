@@ -115,7 +115,7 @@ export default function DashboardPage() {
           >
             Welcome! 🎉
           </h2>
-          <p style={{ color: "#6b7280", marginBottom: "1rem" }}>You're successfully logged in as:</p>
+          <p style={{ color: "#6b7280", marginBottom: "1rem" }}>You&apos;re successfully logged in as:</p>
           <div
             style={{
               background: "#f9fafb",
@@ -137,7 +137,7 @@ export default function DashboardPage() {
             }}
           >
             <p style={{ color: "#1e40af", fontSize: "0.875rem" }}>
-              🚧 This is a placeholder dashboard. We'll build the actual inventory management features in the next
+              🚧 This is a placeholder dashboard. We&apos;ll build the actual inventory management features in the next
               steps!
             </p>
           </div>

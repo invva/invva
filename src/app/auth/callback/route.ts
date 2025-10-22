@@ -11,7 +11,7 @@ export async function GET(request: Request) {
 
   try {
     const supabase = await createSupabaseServer()
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (error) {
       console.error("Error exchanging code:", error)
