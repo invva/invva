@@ -3,40 +3,102 @@
 import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { createClient } from "@/lib/supabase/client"
+import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
+  const [otp, setOtp] = useState("")
+  const [step, setStep] = useState<"email" | "otp">("email")
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
+  const router = useRouter()
+  const supabase = createClient()
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setMessage("")
     setError("")
 
     try {
-      const res = await fetch("/api/auth/magic-link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email })
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: true
+        }
       })
 
-      const data = await res.json()
-
-      if (res.ok) {
-        setMessage(data.message)
-        setEmail("") // Clear email field
+      if (error) {
+        setError(error.message)
       } else {
-        setError(data.error || "Something went wrong")
+        setMessage("Check your email for the 6-digit code!")
+        setStep("otp")
       }
-    } catch (err) {
-      console.error("Network error:", err)
+    } catch {
       setError("Network error. Please try again.")
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setMessage("")
+    setError("")
+
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: "email"
+      })
+
+      if (error) {
+        setError(error.message)
+      } else {
+        setMessage("Success! Redirecting...")
+        router.push("/dashboard")
+      }
+    } catch {
+      setError("Network error. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResendCode = async () => {
+    setLoading(true)
+    setMessage("")
+    setError("")
+
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: true
+        }
+      })
+
+      if (error) {
+        setError(error.message)
+      } else {
+        setMessage("New code sent! Check your email.")
+      }
+    } catch {
+      setError("Network error. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleBackToEmail = () => {
+    setStep("email")
+    setOtp("")
+    setMessage("")
+    setError("")
   }
 
   return (
@@ -93,7 +155,7 @@ export default function LoginPage() {
               color: "#1f2937"
             }}
           >
-            Welcome back
+            {step === "email" ? "Welcome back" : "Enter code"}
           </h2>
           <p
             style={{
@@ -102,70 +164,181 @@ export default function LoginPage() {
               fontSize: "0.95rem"
             }}
           >
-            Sign in with your email to continue
+            {step === "email" ? "Sign in with your email to continue" : `We sent a 6-digit code to ${email}`}
           </p>
 
-          <form onSubmit={handleLogin}>
-            <div style={{ marginBottom: "1.5rem" }}>
-              <label
-                htmlFor="email"
-                style={{
-                  display: "block",
-                  fontSize: "0.875rem",
-                  fontWeight: "500",
-                  color: "#374151",
-                  marginBottom: "0.5rem"
-                }}
-              >
-                Email address
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+          {/* Email Step */}
+          {step === "email" && (
+            <form onSubmit={handleSendCode}>
+              <div style={{ marginBottom: "1.5rem" }}>
+                <label
+                  htmlFor="email"
+                  style={{
+                    display: "block",
+                    fontSize: "0.875rem",
+                    fontWeight: "500",
+                    color: "#374151",
+                    marginBottom: "0.5rem"
+                  }}
+                >
+                  Email address
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  disabled={loading}
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem 1rem",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "8px",
+                    fontSize: "1rem",
+                    outline: "none",
+                    transition: "border-color 0.2s"
+                  }}
+                  onFocus={(e) => (e.target.style.borderColor = "#667eea")}
+                  onBlur={(e) => (e.target.style.borderColor = "#d1d5db")}
+                />
+              </div>
+
+              <button
+                type="submit"
                 disabled={loading}
                 style={{
                   width: "100%",
                   padding: "0.75rem 1rem",
-                  border: "1px solid #d1d5db",
+                  background: loading ? "#9ca3af" : "#667eea",
+                  color: "white",
+                  border: "none",
                   borderRadius: "8px",
                   fontSize: "1rem",
-                  outline: "none",
-                  transition: "border-color 0.2s"
+                  fontWeight: "500",
+                  cursor: loading ? "not-allowed" : "pointer",
+                  transition: "background 0.2s"
                 }}
-                onFocus={(e) => (e.target.style.borderColor = "#667eea")}
-                onBlur={(e) => (e.target.style.borderColor = "#d1d5db")}
-              />
-            </div>
+                onMouseEnter={(e) => {
+                  if (!loading) e.currentTarget.style.background = "#5568d3"
+                }}
+                onMouseLeave={(e) => {
+                  if (!loading) e.currentTarget.style.background = "#667eea"
+                }}
+              >
+                {loading ? "Sending..." : "Send code"}
+              </button>
+            </form>
+          )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                width: "100%",
-                padding: "0.75rem 1rem",
-                background: loading ? "#9ca3af" : "#667eea",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "1rem",
-                fontWeight: "500",
-                cursor: loading ? "not-allowed" : "pointer",
-                transition: "background 0.2s"
-              }}
-              onMouseEnter={(e) => {
-                if (!loading) e.currentTarget.style.background = "#5568d3"
-              }}
-              onMouseLeave={(e) => {
-                if (!loading) e.currentTarget.style.background = "#667eea"
-              }}
-            >
-              {loading ? "Sending..." : "Send magic link"}
-            </button>
-          </form>
+          {/* OTP Step */}
+          {step === "otp" && (
+            <form onSubmit={handleVerifyCode}>
+              <div style={{ marginBottom: "1.5rem" }}>
+                <label
+                  htmlFor="otp"
+                  style={{
+                    display: "block",
+                    fontSize: "0.875rem",
+                    fontWeight: "500",
+                    color: "#374151",
+                    marginBottom: "0.5rem"
+                  }}
+                >
+                  6-digit code
+                </label>
+                <input
+                  id="otp"
+                  type="text"
+                  required
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="000000"
+                  disabled={loading}
+                  maxLength={6}
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem 1rem",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "8px",
+                    fontSize: "1.5rem",
+                    fontWeight: "600",
+                    textAlign: "center",
+                    letterSpacing: "0.5rem",
+                    outline: "none",
+                    transition: "border-color 0.2s"
+                  }}
+                  onFocus={(e) => (e.target.style.borderColor = "#667eea")}
+                  onBlur={(e) => (e.target.style.borderColor = "#d1d5db")}
+                  autoFocus
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading || otp.length !== 6}
+                style={{
+                  width: "100%",
+                  padding: "0.75rem 1rem",
+                  background: loading || otp.length !== 6 ? "#9ca3af" : "#667eea",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "1rem",
+                  fontWeight: "500",
+                  cursor: loading || otp.length !== 6 ? "not-allowed" : "pointer",
+                  transition: "background 0.2s",
+                  marginBottom: "1rem"
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading && otp.length === 6) e.currentTarget.style.background = "#5568d3"
+                }}
+                onMouseLeave={(e) => {
+                  if (!loading && otp.length === 6) e.currentTarget.style.background = "#667eea"
+                }}
+              >
+                {loading ? "Verifying..." : "Verify code"}
+              </button>
+
+              <div style={{ display: "flex", gap: "0.5rem", fontSize: "0.875rem" }}>
+                <button
+                  type="button"
+                  onClick={handleResendCode}
+                  disabled={loading}
+                  style={{
+                    flex: 1,
+                    padding: "0.5rem",
+                    background: "transparent",
+                    color: "#667eea",
+                    border: "1px solid #667eea",
+                    borderRadius: "6px",
+                    cursor: loading ? "not-allowed" : "pointer",
+                    fontWeight: "500"
+                  }}
+                >
+                  Resend code
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBackToEmail}
+                  disabled={loading}
+                  style={{
+                    flex: 1,
+                    padding: "0.5rem",
+                    background: "transparent",
+                    color: "#6b7280",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "6px",
+                    cursor: loading ? "not-allowed" : "pointer",
+                    fontWeight: "500"
+                  }}
+                >
+                  Change email
+                </button>
+              </div>
+            </form>
+          )}
 
           {/* Success Message */}
           {message && (
@@ -210,7 +383,9 @@ export default function LoginPage() {
               color: "#6b7280"
             }}
           >
-            No password needed. We&apos;ll email you a magic link.
+            {step === "email"
+              ? "We'll email you a 6-digit code. No password needed."
+              : "Check your email for the code. It expires in 10 minutes."}
           </p>
         </div>
 
