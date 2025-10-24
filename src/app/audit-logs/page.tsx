@@ -17,11 +17,26 @@ import {
   Chip,
   CircularProgress,
   TextField,
+  FormControl,
+  InputLabel,
   Select,
   MenuItem,
-  FormControl,
-  InputLabel
+  Tabs,
+  Tab,
+  Card,
+  CardContent,
+  Grid,
+  useTheme,
+  useMediaQuery,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from "@mui/material"
+import {
+  Inventory as InventoryIcon,
+  TrendingUp as MovementIcon,
+  ExpandMore as ExpandMoreIcon
+} from "@mui/icons-material"
 
 interface AuditLog {
   id: string
@@ -42,8 +57,12 @@ export default function AuditLogsPage() {
   const [filterAction, setFilterAction] = useState<string>("ALL")
   const [filterTable, setFilterTable] = useState<string>("ALL")
   const [searchTerm, setSearchTerm] = useState("")
+  const [tabValue, setTabValue] = useState(0)
+
   const router = useRouter()
   const supabase = createClient()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
 
   const fetchLogs = useCallback(async () => {
     setLoading(true)
@@ -55,7 +74,6 @@ export default function AuditLogsPage() {
         .limit(200)
 
       if (error) throw error
-
       setLogs(data || [])
     } catch (error) {
       console.error("Error fetching audit logs:", error)
@@ -80,7 +98,7 @@ export default function AuditLogsPage() {
     checkUserAndFetchLogs()
   }, [checkUserAndFetchLogs])
 
-  const getActionColor = (action: string): "success" | "info" | "error" | "default" => {
+  const getActionColor = (action: string) => {
     switch (action) {
       case "INSERT":
         return "success"
@@ -93,73 +111,206 @@ export default function AuditLogsPage() {
     }
   }
 
-  const getTableColor = (tableName: string): "primary" | "secondary" | "default" => {
+  const getTableIcon = (tableName: string) => {
     switch (tableName) {
       case "products":
-        return "primary"
+        return <InventoryIcon fontSize="small" />
       case "stock_movements":
-        return "secondary"
+        return <MovementIcon fontSize="small" />
       default:
-        return "default"
+        return null
     }
   }
 
-  const getDescription = (log: AuditLog) => {
-    const data = log.action === "DELETE" ? log.old_data : log.new_data
+  const formatTableName = (tableName: string) => {
+    return tableName
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ")
+  }
 
-    if (log.table_name === "products") {
-      return (data?.name as string) || "Unknown Product"
-    } else if (log.table_name === "stock_movements") {
-      const type = (data?.movement_type as string) || "unknown"
-      const quantity = (data?.quantity as number) || 0
-      return `${type.toUpperCase()}: ${quantity} units`
+  const renderChangedData = (log: AuditLog) => {
+    if (log.action === "INSERT") {
+      return (
+        <Box>
+          <Typography variant="body2" fontWeight="bold" gutterBottom>
+            New Record Created:
+          </Typography>
+          {Object.entries(log.new_data || {}).map(([key, value]) => (
+            <Typography key={key} variant="body2" sx={{ pl: 2 }}>
+              <strong>{key}:</strong> {String(value)}
+            </Typography>
+          ))}
+        </Box>
+      )
     }
 
-    return log.record_id
-  }
-
-  const getChangedFieldsText = (log: AuditLog) => {
-    if (log.action === "INSERT" || log.action === "DELETE") {
-      return "All fields"
+    if (log.action === "DELETE") {
+      return (
+        <Box>
+          <Typography variant="body2" fontWeight="bold" gutterBottom>
+            Deleted Record:
+          </Typography>
+          {Object.entries(log.old_data || {}).map(([key, value]) => (
+            <Typography key={key} variant="body2" sx={{ pl: 2 }}>
+              <strong>{key}:</strong> {String(value)}
+            </Typography>
+          ))}
+        </Box>
+      )
     }
-    return log.changed_fields?.join(", ") || "None"
-  }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    })
-  }
+    if (log.action === "UPDATE" && log.changed_fields && log.changed_fields.length > 0) {
+      return (
+        <Box>
+          <Typography variant="body2" fontWeight="bold" gutterBottom>
+            Changed Fields:
+          </Typography>
+          {log.changed_fields.map((field) => (
+            <Box key={field} sx={{ pl: 2, mb: 1 }}>
+              <Typography variant="body2">
+                <strong>{field}:</strong>
+              </Typography>
+              <Typography variant="body2" color="error" sx={{ pl: 2 }}>
+                Old: {String(log.old_data?.[field] || "null")}
+              </Typography>
+              <Typography variant="body2" color="success.main" sx={{ pl: 2 }}>
+                New: {String(log.new_data?.[field] || "null")}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      )
+    }
 
-  const getTableStats = () => {
-    return logs.reduce((acc, log) => {
-      acc[log.table_name] = (acc[log.table_name] || 0) + 1
-      return acc
-    }, {} as Record<string, number>)
+    return <Typography variant="body2">No changes recorded</Typography>
   }
 
   const filteredLogs = logs.filter((log) => {
+    const matchesSearch =
+      (log.user_email?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      log.record_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      JSON.stringify(log.new_data).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      JSON.stringify(log.old_data).toLowerCase().includes(searchTerm.toLowerCase())
+
     const matchesAction = filterAction === "ALL" || log.action === filterAction
     const matchesTable = filterTable === "ALL" || log.table_name === filterTable
-    const matchesSearch =
-      searchTerm === "" ||
-      getDescription(log).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.user_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.table_name.toLowerCase().includes(searchTerm.toLowerCase())
-    return matchesAction && matchesTable && matchesSearch
+
+    return matchesSearch && matchesAction && matchesTable
   })
 
-  const tableStats = getTableStats()
+  // Separate logs by table
+  const productLogs = filteredLogs.filter((log) => log.table_name === "products")
+  const movementLogs = filteredLogs.filter((log) => log.table_name === "stock_movements")
+  const otherLogs = filteredLogs.filter((log) => log.table_name !== "products" && log.table_name !== "stock_movements")
+
+  const renderLogsTable = (logsToRender: AuditLog[]) => {
+    if (logsToRender.length === 0) {
+      return (
+        <Paper sx={{ p: 3, textAlign: "center" }}>
+          <Typography color="text.secondary">No audit logs found</Typography>
+        </Paper>
+      )
+    }
+
+    if (isMobile) {
+      return (
+        <Box>
+          {logsToRender.map((log) => (
+            <Card key={log.id} sx={{ mb: 2 }}>
+              <CardContent>
+                <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                  <Box>
+                    <Chip
+                      label={log.action}
+                      color={getActionColor(log.action) as "error" | "success" | "info" | "default"}
+                      size="small"
+                      sx={{ mb: 1 }}
+                    />
+                    <Typography variant="body2" color="text.secondary">
+                      {formatTableName(log.table_name)}
+                    </Typography>
+                  </Box>
+                  <Typography variant="caption" color="text.secondary">
+                    {new Date(log.created_at).toLocaleString()}
+                  </Typography>
+                </Box>
+
+                <Typography variant="body2" gutterBottom>
+                  <strong>User:</strong> {log.user_email || "system"}
+                </Typography>
+                <Typography variant="body2" gutterBottom>
+                  <strong>Record ID:</strong> {log.record_id}
+                </Typography>
+
+                <Accordion sx={{ mt: 2 }}>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Typography variant="body2">View Changes</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>{renderChangedData(log)}</AccordionDetails>
+                </Accordion>
+              </CardContent>
+            </Card>
+          ))}
+        </Box>
+      )
+    }
+
+    return (
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Action</TableCell>
+              <TableCell>Table</TableCell>
+              <TableCell>Record ID</TableCell>
+              <TableCell>User</TableCell>
+              <TableCell>Changed Fields</TableCell>
+              <TableCell>Date</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {logsToRender.map((log) => (
+              <TableRow key={log.id} hover>
+                <TableCell>
+                  <Chip
+                    label={log.action}
+                    color={getActionColor(log.action) as "error" | "success" | "info" | "default"}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    {getTableIcon(log.table_name)}
+                    {formatTableName(log.table_name)}
+                  </Box>
+                </TableCell>
+                <TableCell>{log.record_id}</TableCell>
+                <TableCell>{log.user_email}</TableCell>
+                <TableCell>
+                  {log.action === "UPDATE" && log.changed_fields ? (
+                    <Box>
+                      {log.changed_fields.map((field) => (
+                        <Chip key={field} label={field} size="small" sx={{ mr: 0.5, mb: 0.5 }} />
+                      ))}
+                    </Box>
+                  ) : (
+                    "-"
+                  )}
+                </TableCell>
+                <TableCell>{new Date(log.created_at).toLocaleString()}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    )
+  }
 
   if (loading) {
     return (
       <DashboardLayout>
-        <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
       </DashboardLayout>
@@ -168,150 +319,96 @@ export default function AuditLogsPage() {
 
   return (
     <DashboardLayout>
-      {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" fontWeight={600} gutterBottom>
-          Audit Log
+      <Box sx={{ p: { xs: 2, sm: 3 } }}>
+        {/* Header */}
+        <Typography variant="h4" component="h1" mb={3}>
+          Audit Logs
         </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Complete history of all changes across the system
-        </Typography>
-      </Box>
 
-      {/* Stats Cards */}
-      <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
-        <Paper sx={{ p: 2, flex: 1, minWidth: 150 }}>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            Total Changes
-          </Typography>
-          <Typography variant="h4" fontWeight={600}>
-            {logs.length}
-          </Typography>
+        {/* Filters */}
+        <Paper sx={{ p: 2, mb: 3 }}>
+          <Grid container spacing={2}>
+            <Grid columns={{ xs: 12, md: 6 }}>
+              <TextField
+                fullWidth
+                label="Search logs"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                size="small"
+                placeholder="Search by user, record ID, or data"
+              />
+            </Grid>
+            <Grid columns={{ xs: 12, sm: 6, md: 3 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Action</InputLabel>
+                <Select value={filterAction} label="Action" onChange={(e) => setFilterAction(e.target.value)}>
+                  <MenuItem value="ALL">All Actions</MenuItem>
+                  <MenuItem value="INSERT">Insert</MenuItem>
+                  <MenuItem value="UPDATE">Update</MenuItem>
+                  <MenuItem value="DELETE">Delete</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid columns={{ xs: 12, sm: 6, md: 3 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Table</InputLabel>
+                <Select value={filterTable} label="Table" onChange={(e) => setFilterTable(e.target.value)}>
+                  <MenuItem value="ALL">All Tables</MenuItem>
+                  <MenuItem value="products">Products</MenuItem>
+                  <MenuItem value="stock_movements">Stock Movements</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
         </Paper>
-        <Paper sx={{ p: 2, flex: 1, minWidth: 150 }}>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            Products Changes
-          </Typography>
-          <Typography variant="h4" fontWeight={600}>
-            {tableStats.products || 0}
-          </Typography>
-        </Paper>
-        <Paper sx={{ p: 2, flex: 1, minWidth: 150 }}>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            Stock Movements
-          </Typography>
-          <Typography variant="h4" fontWeight={600}>
-            {tableStats.stock_movements || 0}
-          </Typography>
-        </Paper>
-      </Box>
 
-      {/* Filters */}
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          gap: 2,
-          mb: 3
-        }}
-      >
-        <TextField
-          placeholder="Search by description, user, or table..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          size="small"
-          sx={{ flex: 1, bgcolor: "white" }}
-        />
-        <FormControl size="small" sx={{ minWidth: 150, bgcolor: "white" }}>
-          <InputLabel>Table</InputLabel>
-          <Select value={filterTable} label="Table" onChange={(e) => setFilterTable(e.target.value)}>
-            <MenuItem value="ALL">All Tables</MenuItem>
-            <MenuItem value="products">Products</MenuItem>
-            <MenuItem value="stock_movements">Stock Movements</MenuItem>
-          </Select>
-        </FormControl>
-        <FormControl size="small" sx={{ minWidth: 150, bgcolor: "white" }}>
-          <InputLabel>Action</InputLabel>
-          <Select value={filterAction} label="Action" onChange={(e) => setFilterAction(e.target.value)}>
-            <MenuItem value="ALL">All Actions</MenuItem>
-            <MenuItem value="INSERT">Created</MenuItem>
-            <MenuItem value="UPDATE">Updated</MenuItem>
-            <MenuItem value="DELETE">Deleted</MenuItem>
-          </Select>
-        </FormControl>
-      </Box>
-
-      {/* Audit Logs Table */}
-      <TableContainer component={Paper}>
-        {filteredLogs.length === 0 ? (
-          <Box sx={{ p: 8, textAlign: "center" }}>
-            <Typography variant="h1" sx={{ mb: 2 }}>
-              📋
-            </Typography>
-            <Typography color="text.secondary" gutterBottom>
-              No audit logs found
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {searchTerm || filterAction !== "ALL" || filterTable !== "ALL"
-                ? "Try adjusting your filters"
-                : "Logs will appear here when changes are made"}
-            </Typography>
-          </Box>
-        ) : (
-          <Table>
-            <TableHead>
-              <TableRow sx={{ bgcolor: "#f9fafb" }}>
-                <TableCell sx={{ fontWeight: 600 }}>Table</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Action</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>User</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Changed Fields</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Date & Time</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredLogs.map((log) => (
-                <TableRow key={log.id} hover>
-                  <TableCell>
-                    <Chip
-                      label={log.table_name}
-                      color={getTableColor(log.table_name)}
-                      size="small"
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip label={log.action} color={getActionColor(log.action)} size="small" sx={{ fontWeight: 500 }} />
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>{getDescription(log)}</TableCell>
-                  <TableCell>
-                    <Typography variant="body2">{log.user_email}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" color="text.secondary">
-                      {getChangedFieldsText(log)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" color="text.secondary">
-                      {formatDate(log.created_at)}
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </TableContainer>
-
-      {/* Stats */}
-      {filteredLogs.length > 0 && (
-        <Box sx={{ mt: 2, textAlign: "center" }}>
-          <Typography variant="body2" color="text.secondary">
-            Showing {filteredLogs.length} of {logs.length} log entries
-          </Typography>
+        {/* Tabs */}
+        <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
+          <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
+            <Tab label={`All (${filteredLogs.length})`} />
+            <Tab label={`Products (${productLogs.length})`} icon={<InventoryIcon />} iconPosition="start" />
+            <Tab label={`Movements (${movementLogs.length})`} icon={<MovementIcon />} iconPosition="start" />
+          </Tabs>
         </Box>
-      )}
+
+        {/* Content based on selected tab */}
+        {tabValue === 0 && renderLogsTable(filteredLogs)}
+        {tabValue === 1 && renderLogsTable(productLogs)}
+        {tabValue === 2 && renderLogsTable(movementLogs)}
+
+        {/* Summary Stats */}
+        <Paper sx={{ p: 2, mt: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Summary
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid columns={{ xs: 6, sm: 3 }}>
+              <Typography variant="body2" color="text.secondary">
+                Total Logs
+              </Typography>
+              <Typography variant="h6">{logs.length}</Typography>
+            </Grid>
+            <Grid columns={{ xs: 6, sm: 3 }}>
+              <Typography variant="body2" color="text.secondary">
+                Products
+              </Typography>
+              <Typography variant="h6">{productLogs.length}</Typography>
+            </Grid>
+            <Grid columns={{ xs: 6, sm: 3 }}>
+              <Typography variant="body2" color="text.secondary">
+                Movements
+              </Typography>
+              <Typography variant="h6">{movementLogs.length}</Typography>
+            </Grid>
+            <Grid columns={{ xs: 6, sm: 3 }}>
+              <Typography variant="body2" color="text.secondary">
+                Other
+              </Typography>
+              <Typography variant="h6">{otherLogs.length}</Typography>
+            </Grid>
+          </Grid>
+        </Paper>
+      </Box>
     </DashboardLayout>
   )
 }
