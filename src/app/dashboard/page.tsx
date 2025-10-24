@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import DashboardLayout from "@/components/DashboardLayout"
 import type { User } from "@supabase/supabase-js"
+import { Box, Typography, Paper, Button, Alert, CircularProgress } from "@mui/material"
+import { Inventory as InventoryIcon, TrendingUp as TrendingUpIcon } from "@mui/icons-material"
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
@@ -28,121 +31,100 @@ export default function DashboardPage() {
     checkUser()
   }, [router, supabase])
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push("/")
-  }
-
   if (loading) {
     return (
-      <div
-        style={{
+      <Box
+        sx={{
           minHeight: "100vh",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-          color: "white",
-          fontSize: "1.2rem"
+          bgcolor: "#f5f5f5"
         }}
       >
-        Loading...
-      </div>
+        <CircularProgress />
+      </Box>
     )
   }
 
   if (!user) {
-    return null // Will redirect to login
+    return null
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f3f4f6" }}>
-      {/* Header */}
-      <header
-        style={{
-          background: "white",
-          borderBottom: "1px solid #e5e7eb",
-          padding: "1rem 2rem"
-        }}
-      >
-        <div
-          style={{
-            maxWidth: "1200px",
-            margin: "0 auto",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center"
-          }}
-        >
-          <h1 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#1f2937" }}>Invva Dashboard</h1>
-          <button
-            onClick={handleSignOut}
-            style={{
-              padding: "0.5rem 1rem",
-              background: "#667eea",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontSize: "0.875rem",
-              fontWeight: "500"
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#5568d3")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "#667eea")}
-          >
-            Sign Out
-          </button>
-        </div>
-      </header>
+    <DashboardLayout>
+      <Paper sx={{ p: 4 }}>
+        <Typography variant="h4" fontWeight={600} gutterBottom>
+          Welcome to Invva! 🎉
+        </Typography>
 
-      {/* Main Content */}
-      <main style={{ maxWidth: "1200px", margin: "0 auto", padding: "2rem" }}>
-        <div
-          style={{
-            background: "white",
-            borderRadius: "12px",
-            padding: "2rem",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "1.5rem",
-              fontWeight: "600",
-              marginBottom: "1rem",
-              color: "#1f2937"
-            }}
-          >
-            Welcome! 🎉
-          </h2>
-          <p style={{ color: "#6b7280", marginBottom: "1rem" }}>You&apos;re successfully logged in as:</p>
-          <div
-            style={{
-              background: "#f9fafb",
-              padding: "1rem",
-              borderRadius: "8px",
-              border: "1px solid #e5e7eb"
-            }}
-          >
-            <p style={{ fontFamily: "monospace", color: "#374151" }}>{user.email}</p>
-          </div>
+        <Typography color="text.secondary" gutterBottom>
+          You&apos;re successfully logged in as:
+        </Typography>
 
-          <div
-            style={{
-              marginTop: "2rem",
-              padding: "1rem",
-              background: "#dbeafe",
-              borderRadius: "8px",
-              border: "1px solid #93c5fd"
+        <Paper sx={{ p: 2, bgcolor: "#f9fafb", mb: 3 }}>
+          <Typography sx={{ fontFamily: "monospace" }}>{user.email}</Typography>
+        </Paper>
+
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+            🚀 Quick Start
+          </Typography>
+          <Typography variant="body2" gutterBottom>
+            Get started with Invva in 3 easy steps:
+          </Typography>
+          <Box component="ol" sx={{ pl: 2, mb: 0 }}>
+            <li>
+              <Typography variant="body2">
+                <strong>Add your first product</strong> - Click on the Products tab
+              </Typography>
+            </li>
+            <li>
+              <Typography variant="body2">
+                <strong>Record stock movements</strong> - Track inventory IN and OUT
+              </Typography>
+            </li>
+            <li>
+              <Typography variant="body2">
+                <strong>Monitor your inventory</strong> - See real-time stock levels
+              </Typography>
+            </li>
+          </Box>
+        </Alert>
+
+        <Box sx={{ display: "flex", gap: 2 }}>
+          <Button
+            variant="contained"
+            startIcon={<InventoryIcon />}
+            href="/products"
+            sx={{
+              bgcolor: "#667eea",
+              textTransform: "none",
+              "&:hover": {
+                bgcolor: "#5568d3"
+              }
             }}
           >
-            <p style={{ color: "#1e40af", fontSize: "0.875rem" }}>
-              🚧 This is a placeholder dashboard. We&apos;ll build the actual inventory management features in the next
-              steps!
-            </p>
-          </div>
-        </div>
-      </main>
-    </div>
+            Go to Products
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<TrendingUpIcon />}
+            href="/movements"
+            sx={{
+              borderColor: "#667eea",
+              color: "#667eea",
+              textTransform: "none",
+              "&:hover": {
+                borderColor: "#5568d3",
+                bgcolor: "rgba(102, 126, 234, 0.04)"
+              }
+            }}
+          >
+            View Movements
+          </Button>
+        </Box>
+      </Paper>
+    </DashboardLayout>
   )
 }
