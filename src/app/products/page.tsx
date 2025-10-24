@@ -51,7 +51,7 @@ interface Product {
   reorder_point: number | null
   custom_fields: Record<string, unknown> | null
   created_at: string
-  current_stock?: number
+  current_stock: number
 }
 
 interface SnackbarState {
@@ -94,12 +94,7 @@ export default function ProductsPage() {
 
         if (error) throw error
 
-        const productsWithStock = (data || []).map((product) => ({
-          ...product,
-          current_stock: 0
-        }))
-
-        setProducts(productsWithStock)
+        setProducts(data || [])
       } catch (error) {
         console.error("Error fetching products:", error)
         showSnackbar("Failed to load products", "error")
@@ -269,7 +264,11 @@ export default function ProductsPage() {
                       {!isTablet && <TableCell>{product.barcode || "-"}</TableCell>}
                       <TableCell>{product.unit_of_measure}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500 }}>
-                        {product.current_stock || 0}
+                        {product.reorder_point && product.current_stock <= product.reorder_point ? (
+                          <Chip label={`${product.current_stock} - Low`} color="error" size="small" />
+                        ) : (
+                          product.current_stock
+                        )}
                       </TableCell>
                       <TableCell align="right">
                         <Box
@@ -326,7 +325,11 @@ export default function ProductsPage() {
                           {product.name}
                         </Typography>
                         <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-                          <Chip label={`Stock: ${product.current_stock || 0}`} size="small" color="primary" />
+                          {product.reorder_point && product.current_stock <= product.reorder_point ? (
+                            <Chip label={`Stock: ${product.current_stock} - Low`} size="small" color="error" />
+                          ) : (
+                            <Chip label={`Stock: ${product.current_stock}`} size="small" color="primary" />
+                          )}
                           <Chip label={product.unit_of_measure} size="small" variant="outlined" />
                         </Stack>
                       </Box>
@@ -444,7 +447,8 @@ function ProductModal({ open, product, onClose, onSave, userId }: ProductModalPr
     barcode: product?.barcode || "",
     description: product?.description || "",
     unit_of_measure: product?.unit_of_measure || "pcs",
-    reorder_point: product?.reorder_point?.toString() || ""
+    reorder_point: product?.reorder_point?.toString() || "",
+    initial_stock: ""
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -460,7 +464,8 @@ function ProductModal({ open, product, onClose, onSave, userId }: ProductModalPr
         barcode: product.barcode || "",
         description: product.description || "",
         unit_of_measure: product.unit_of_measure || "pcs",
-        reorder_point: product.reorder_point?.toString() || ""
+        reorder_point: product.reorder_point?.toString() || "",
+        initial_stock: ""
       })
     } else {
       setFormData({
@@ -469,7 +474,8 @@ function ProductModal({ open, product, onClose, onSave, userId }: ProductModalPr
         barcode: "",
         description: "",
         unit_of_measure: "pcs",
-        reorder_point: ""
+        reorder_point: "",
+        initial_stock: ""
       })
     }
     setError("")
@@ -497,9 +503,29 @@ function ProductModal({ open, product, onClose, onSave, userId }: ProductModalPr
         if (error) throw error
         onSave(`"${formData.name}" updated successfully`)
       } else {
-        const { error } = await supabase.from("products").insert(productData)
+        // Insert product
+        const { data: newProduct, error: productError } = await supabase
+          .from("products")
+          .insert(productData)
+          .select()
+          .single()
 
-        if (error) throw error
+        if (productError) throw productError
+
+        // If initial stock is provided, create an IN movement
+        if (formData.initial_stock && parseFloat(formData.initial_stock) > 0) {
+          const { error: movementError } = await supabase.from("stock_movements").insert({
+            user_id: userId,
+            product_id: newProduct.id,
+            movement_type: "IN",
+            quantity: parseFloat(formData.initial_stock),
+            notes: "Opening stock balance",
+            movement_date: new Date().toISOString().split("T")[0]
+          })
+
+          if (movementError) throw movementError
+        }
+
         onSave(`"${formData.name}" added successfully`)
       }
     } catch (err) {
@@ -614,6 +640,21 @@ function ProductModal({ open, product, onClose, onSave, userId }: ProductModalPr
               htmlInput: { min: 0 }
             }}
           />
+
+          {!product && (
+            <TextField
+              fullWidth
+              type="number"
+              label="Initial Stock (Optional)"
+              value={formData.initial_stock}
+              onChange={(e) => setFormData({ ...formData, initial_stock: e.target.value })}
+              helperText="Enter opening stock quantity for this product"
+              sx={{ mb: 2.5 }}
+              slotProps={{
+                htmlInput: { min: 0, step: 0.01 }
+              }}
+            />
+          )}
 
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
