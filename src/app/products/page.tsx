@@ -49,6 +49,8 @@ interface Product {
   description: string | null
   unit_of_measure: string
   reorder_point: number | null
+  unit_price: number | null
+  category: string | null
   custom_fields: Record<string, unknown> | null
   created_at: string
   current_stock: number
@@ -161,8 +163,17 @@ export default function ProductsPage() {
     (product) =>
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.barcode?.toLowerCase().includes(searchTerm.toLowerCase())
+      product.barcode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.category?.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  const formatCurrency = (value: number | null) => {
+    if (value === null || value === undefined) return "-"
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD"
+    }).format(value)
+  }
 
   if (loading) {
     return (
@@ -215,7 +226,7 @@ export default function ProductsPage() {
       <Box sx={{ mb: 2 }}>
         <TextField
           fullWidth
-          placeholder="Search products..."
+          placeholder="Search products by name, SKU, barcode, or category..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           size="small"
@@ -246,8 +257,11 @@ export default function ProductsPage() {
                   <TableRow sx={{ bgcolor: "#f9fafb" }}>
                     <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
                     {!isTablet && <TableCell sx={{ fontWeight: 600 }}>SKU</TableCell>}
-                    {!isTablet && <TableCell sx={{ fontWeight: 600 }}>Barcode</TableCell>}
+                    <TableCell sx={{ fontWeight: 600 }}>Category</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Unit</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>
+                      Price
+                    </TableCell>
                     <TableCell align="right" sx={{ fontWeight: 600 }}>
                       Stock
                     </TableCell>
@@ -261,8 +275,13 @@ export default function ProductsPage() {
                     <TableRow key={product.id} hover>
                       <TableCell sx={{ fontWeight: 500 }}>{product.name}</TableCell>
                       {!isTablet && <TableCell>{product.sku || "-"}</TableCell>}
-                      {!isTablet && <TableCell>{product.barcode || "-"}</TableCell>}
+                      <TableCell>
+                        <Chip label={product.category || "General"} size="small" variant="outlined" />
+                      </TableCell>
                       <TableCell>{product.unit_of_measure}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500 }}>
+                        {formatCurrency(product.unit_price)}
+                      </TableCell>
                       <TableCell align="right" sx={{ fontWeight: 500 }}>
                         {product.reorder_point && product.current_stock <= product.reorder_point ? (
                           <Chip label={`${product.current_stock} - Low`} color="error" size="small" />
@@ -324,31 +343,33 @@ export default function ProductsPage() {
                         <Typography variant="h6" fontWeight={600} gutterBottom>
                           {product.name}
                         </Typography>
-                        <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 1, gap: 0.5 }}>
                           {product.reorder_point && product.current_stock <= product.reorder_point ? (
                             <Chip label={`Stock: ${product.current_stock} - Low`} size="small" color="error" />
                           ) : (
                             <Chip label={`Stock: ${product.current_stock}`} size="small" color="primary" />
                           )}
                           <Chip label={product.unit_of_measure} size="small" variant="outlined" />
+                          <Chip label={product.category || "General"} size="small" variant="outlined" />
                         </Stack>
                       </Box>
                     </Box>
 
-                    {(product.sku || product.barcode) && (
-                      <Box sx={{ mb: 1 }}>
-                        {product.sku && (
-                          <Typography variant="body2" color="text.secondary">
-                            SKU: {product.sku}
-                          </Typography>
-                        )}
-                        {product.barcode && (
-                          <Typography variant="body2" color="text.secondary">
-                            Barcode: {product.barcode}
-                          </Typography>
-                        )}
-                      </Box>
-                    )}
+                    <Box sx={{ mb: 1 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Price: <strong>{formatCurrency(product.unit_price)}</strong>
+                      </Typography>
+                      {product.sku && (
+                        <Typography variant="body2" color="text.secondary">
+                          SKU: {product.sku}
+                        </Typography>
+                      )}
+                      {product.barcode && (
+                        <Typography variant="body2" color="text.secondary">
+                          Barcode: {product.barcode}
+                        </Typography>
+                      )}
+                    </Box>
                   </CardContent>
 
                   <CardActions sx={{ px: 2, pb: 2 }}>
@@ -431,7 +452,7 @@ export default function ProductsPage() {
   )
 }
 
-// Product Modal Component (same as before, but with responsive width)
+// Product Modal Component
 interface ProductModalProps {
   open: boolean
   product: Product | null
@@ -447,6 +468,8 @@ function ProductModal({ open, product, onClose, onSave, userId }: ProductModalPr
     barcode: product?.barcode || "",
     description: product?.description || "",
     unit_of_measure: product?.unit_of_measure || "pcs",
+    category: product?.category || "General",
+    unit_price: product?.unit_price?.toString() || "",
     reorder_point: product?.reorder_point?.toString() || "",
     initial_stock: ""
   })
@@ -464,6 +487,8 @@ function ProductModal({ open, product, onClose, onSave, userId }: ProductModalPr
         barcode: product.barcode || "",
         description: product.description || "",
         unit_of_measure: product.unit_of_measure || "pcs",
+        category: product.category || "General",
+        unit_price: product.unit_price?.toString() || "",
         reorder_point: product.reorder_point?.toString() || "",
         initial_stock: ""
       })
@@ -474,6 +499,8 @@ function ProductModal({ open, product, onClose, onSave, userId }: ProductModalPr
         barcode: "",
         description: "",
         unit_of_measure: "pcs",
+        category: "General",
+        unit_price: "",
         reorder_point: "",
         initial_stock: ""
       })
@@ -493,6 +520,8 @@ function ProductModal({ open, product, onClose, onSave, userId }: ProductModalPr
         barcode: formData.barcode || null,
         description: formData.description || null,
         unit_of_measure: formData.unit_of_measure,
+        category: formData.category || "General",
+        unit_price: formData.unit_price ? parseFloat(formData.unit_price) : null,
         reorder_point: formData.reorder_point ? parseInt(formData.reorder_point) : null,
         user_id: userId
       }
@@ -583,21 +612,44 @@ function ProductModal({ open, product, onClose, onSave, userId }: ProductModalPr
             sx={{ mb: 2.5 }}
           />
 
-          <TextField
-            fullWidth
-            label="SKU"
-            value={formData.sku}
-            onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-            sx={{ mb: 2.5 }}
-          />
+          <Box sx={{ display: "flex", gap: 2, mb: 2.5 }}>
+            <TextField
+              fullWidth
+              label="SKU"
+              value={formData.sku}
+              onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+            />
 
-          <TextField
-            fullWidth
-            label="Barcode"
-            value={formData.barcode}
-            onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-            sx={{ mb: 2.5 }}
-          />
+            <TextField
+              fullWidth
+              label="Barcode"
+              value={formData.barcode}
+              onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+            />
+          </Box>
+
+          <FormControl fullWidth sx={{ mb: 2.5 }}>
+            <InputLabel>Category *</InputLabel>
+            <Select
+              required
+              value={formData.category}
+              label="Category *"
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            >
+              <MenuItem value="General">General</MenuItem>
+              <MenuItem value="Electronics">Electronics</MenuItem>
+              <MenuItem value="Clothing">Clothing</MenuItem>
+              <MenuItem value="Food & Beverage">Food & Beverage</MenuItem>
+              <MenuItem value="Health & Beauty">Health & Beauty</MenuItem>
+              <MenuItem value="Home & Garden">Home & Garden</MenuItem>
+              <MenuItem value="Sports & Outdoors">Sports & Outdoors</MenuItem>
+              <MenuItem value="Books & Media">Books & Media</MenuItem>
+              <MenuItem value="Toys & Games">Toys & Games</MenuItem>
+              <MenuItem value="Office Supplies">Office Supplies</MenuItem>
+              <MenuItem value="Automotive">Automotive</MenuItem>
+              <MenuItem value="Pet Supplies">Pet Supplies</MenuItem>
+            </Select>
+          </FormControl>
 
           <TextField
             fullWidth
@@ -609,24 +661,38 @@ function ProductModal({ open, product, onClose, onSave, userId }: ProductModalPr
             sx={{ mb: 2.5 }}
           />
 
-          <FormControl fullWidth sx={{ mb: 2.5 }}>
-            <InputLabel>Unit of Measure *</InputLabel>
-            <Select
-              required
-              value={formData.unit_of_measure}
-              label="Unit of Measure *"
-              onChange={(e) => setFormData({ ...formData, unit_of_measure: e.target.value })}
-            >
-              <MenuItem value="pcs">Pieces (pcs)</MenuItem>
-              <MenuItem value="kg">Kilograms (kg)</MenuItem>
-              <MenuItem value="g">Grams (g)</MenuItem>
-              <MenuItem value="l">Liters (l)</MenuItem>
-              <MenuItem value="ml">Milliliters (ml)</MenuItem>
-              <MenuItem value="box">Box</MenuItem>
-              <MenuItem value="carton">Carton</MenuItem>
-              <MenuItem value="pack">Pack</MenuItem>
-            </Select>
-          </FormControl>
+          <Box sx={{ display: "flex", gap: 2, mb: 2.5 }}>
+            <FormControl fullWidth>
+              <InputLabel>Unit of Measure *</InputLabel>
+              <Select
+                required
+                value={formData.unit_of_measure}
+                label="Unit of Measure *"
+                onChange={(e) => setFormData({ ...formData, unit_of_measure: e.target.value })}
+              >
+                <MenuItem value="pcs">Pieces (pcs)</MenuItem>
+                <MenuItem value="kg">Kilograms (kg)</MenuItem>
+                <MenuItem value="g">Grams (g)</MenuItem>
+                <MenuItem value="l">Liters (l)</MenuItem>
+                <MenuItem value="ml">Milliliters (ml)</MenuItem>
+                <MenuItem value="box">Box</MenuItem>
+                <MenuItem value="carton">Carton</MenuItem>
+                <MenuItem value="pack">Pack</MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              fullWidth
+              type="number"
+              label="Unit Price"
+              value={formData.unit_price}
+              onChange={(e) => setFormData({ ...formData, unit_price: e.target.value })}
+              slotProps={{
+                htmlInput: { min: 0, step: 0.01 },
+                input: { startAdornment: "$" }
+              }}
+            />
+          </Box>
 
           <TextField
             fullWidth
