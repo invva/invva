@@ -25,19 +25,16 @@ import {
   TableHead,
   TableRow,
   Divider,
-  Stack,
-  Button
+  Stack
 } from "@mui/material"
 import {
   Inventory as InventoryIcon,
-  TrendingDown as LowStockIcon,
   TrendingUp as InIcon,
   TrendingDown as OutIcon,
   SwapHoriz as AdjustmentIcon,
   Warning as WarningIcon,
   Assessment as ReportIcon,
-  Refresh as RefreshIcon,
-  Add as AddIcon
+  Refresh as RefreshIcon
 } from "@mui/icons-material"
 
 interface DashboardStats {
@@ -191,6 +188,20 @@ export default function DashboardPage() {
   }
 
   const fetchRecentMovements = async () => {
+    interface SupabaseMovementData {
+      id: string
+      movement_type: "IN" | "OUT" | "ADJUSTMENT"
+      quantity: number
+      movement_date: string
+      reference_number?: string | null
+      products:
+        | {
+            name: string
+            sku: string
+          }[]
+        | null // Array of products, not a single object
+    }
+
     try {
       const { data, error } = await supabase
         .from("stock_movements")
@@ -213,15 +224,19 @@ export default function DashboardPage() {
       if (error) throw error
 
       const formattedMovements =
-        data?.map((m: any) => ({
-          id: m.id,
-          movement_type: m.movement_type,
-          quantity: m.quantity,
-          movement_date: m.movement_date,
-          product_name: m.products?.name || "Unknown",
-          product_sku: m.products?.sku || "",
-          reference_number: m.reference_number
-        })) || []
+        (data as SupabaseMovementData[])?.map((m) => {
+          const product = m.products && m.products.length > 0 ? m.products[0] : null
+
+          return {
+            id: m.id,
+            movement_type: m.movement_type,
+            quantity: m.quantity,
+            movement_date: m.movement_date,
+            product_name: product?.name || "Unknown",
+            product_sku: product?.sku || "",
+            reference_number: m.reference_number || undefined
+          }
+        }) || []
 
       setRecentMovements(formattedMovements)
     } catch (error) {
@@ -476,7 +491,9 @@ export default function DashboardPage() {
                           <Chip
                             label={`${movement.movement_type === "OUT" ? "-" : "+"}${movement.quantity}`}
                             size="small"
-                            color={getMovementColor(movement.movement_type) as any}
+                            color={
+                              getMovementColor(movement.movement_type) as "success" | "error" | "warning" | "default"
+                            }
                           />
                           <Typography variant="caption" display="block" color="textSecondary">
                             {formatDate(movement.movement_date)}

@@ -35,8 +35,6 @@ import {
 import {
   Download as DownloadIcon,
   Print as PrintIcon,
-  DateRange as DateIcon,
-  TrendingUp as InIcon,
   TrendingDown as OutIcon,
   SwapHoriz as AdjustmentIcon,
   Assessment as ReportIcon
@@ -57,6 +55,7 @@ interface InventoryValuationItem {
   unit_price: number
   unit_of_measure: string
   total_value: number
+  [key: string]: unknown
 }
 
 interface StockMovementReport {
@@ -68,6 +67,7 @@ interface StockMovementReport {
   reference_number?: string
   movement_date: string
   notes?: string
+  [key: string]: unknown
 }
 
 interface LowStockReport {
@@ -79,6 +79,7 @@ interface LowStockReport {
   reorder_point: number
   unit_of_measure: string
   difference: number
+  [key: string]: unknown
 }
 
 interface StockSummary {
@@ -208,23 +209,37 @@ export default function ReportsPage() {
 
   // Generate Stock Movements Report
   const generateMovementsReport = async () => {
+    interface SupabaseMovementResponse {
+      id: string
+      movement_type: "IN" | "OUT" | "ADJUSTMENT"
+      quantity: number
+      reference_number?: string | null
+      movement_date: string
+      notes?: string | null
+      products:
+        | {
+            name: string
+            sku: string
+          }[]
+        | null
+    }
     setGenerating(true)
     try {
       let query = supabase
         .from("stock_movements")
         .select(
           `
-          id,
-          movement_type,
-          quantity,
-          reference_number,
-          movement_date,
-          notes,
-          products (
-            name,
-            sku
-          )
-        `
+        id,
+        movement_type,
+        quantity,
+        reference_number,
+        movement_date,
+        notes,
+        products (
+          name,
+          sku
+        )
+      `
         )
         .gte("movement_date", movementStartDate)
         .lte("movement_date", movementEndDate)
@@ -239,16 +254,20 @@ export default function ReportsPage() {
       if (error) throw error
 
       const movements: StockMovementReport[] =
-        data?.map((m: any) => ({
-          id: m.id,
-          product_name: m.products?.name || "Unknown",
-          product_sku: m.products?.sku || "",
-          movement_type: m.movement_type,
-          quantity: m.quantity,
-          reference_number: m.reference_number,
-          movement_date: m.movement_date,
-          notes: m.notes
-        })) || []
+        (data as SupabaseMovementResponse[])?.map((m) => {
+          const product = m.products && m.products.length > 0 ? m.products[0] : null
+
+          return {
+            id: m.id,
+            product_name: product?.name || "Unknown",
+            product_sku: product?.sku || "",
+            movement_type: m.movement_type,
+            quantity: m.quantity,
+            reference_number: m.reference_number || undefined,
+            movement_date: m.movement_date,
+            notes: m.notes || undefined
+          }
+        }) || []
 
       setMovementsData(movements)
     } catch (error) {
@@ -285,7 +304,7 @@ export default function ReportsPage() {
     }
   }
 
-  const exportToCSV = (data: any[], filename: string) => {
+  const exportToCSV = <T extends Record<string, unknown>>(data: T[], filename: string) => {
     if (data.length === 0) {
       alert("No data to export")
       return
@@ -520,7 +539,7 @@ export default function ReportsPage() {
                   </Table>
                 </TableContainer>
               ) : (
-                <Alert severity="info">Click "Generate Report" to view inventory valuation</Alert>
+                <Alert severity="info">Click &rdquo;Generate Report&rdquo; to view inventory valuation</Alert>
               )}
             </Box>
           </TabPanel>
@@ -657,7 +676,9 @@ export default function ReportsPage() {
                   </Table>
                 </TableContainer>
               ) : (
-                <Alert severity="info">Select filters and click "Generate Report" to view stock movements</Alert>
+                <Alert severity="info">
+                  Select filters and click &rdquo;Generate Report&rdquo; to view stock movements
+                </Alert>
               )}
             </Box>
           </TabPanel>
