@@ -1,10 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
 import DashboardLayout from "@/components/DashboardLayout"
 import { useRouter } from "next/navigation"
-import type { User } from "@supabase/supabase-js"
 import {
   Box,
   Typography,
@@ -16,8 +15,6 @@ import {
   Alert,
   Chip,
   IconButton,
-  useTheme,
-  useMediaQuery,
   Table,
   TableBody,
   TableCell,
@@ -25,7 +22,8 @@ import {
   TableHead,
   TableRow,
   Divider,
-  Stack
+  Stack,
+  Button
 } from "@mui/material"
 import {
   Inventory as InventoryIcon,
@@ -34,7 +32,8 @@ import {
   SwapHoriz as AdjustmentIcon,
   Warning as WarningIcon,
   Assessment as ReportIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  Add as AddIcon
 } from "@mui/icons-material"
 
 interface DashboardStats {
@@ -64,7 +63,6 @@ interface RecentMovement {
 }
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<DashboardStats>({
     totalProducts: 0,
@@ -78,39 +76,8 @@ export default function DashboardPage() {
 
   const router = useRouter()
   const supabase = createClient()
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
 
-  useEffect(() => {
-    checkUser()
-  }, [])
-
-  const checkUser = async () => {
-    const {
-      data: { user }
-    } = await supabase.auth.getUser()
-    if (!user) {
-      router.push("/login")
-    } else {
-      setUser(user)
-      await fetchDashboardData()
-    }
-    setLoading(false)
-  }
-
-  const fetchDashboardData = async () => {
-    setRefreshing(true)
-    try {
-      // Fetch all data in parallel
-      await Promise.all([fetchStats(), fetchLowStockProducts(), fetchRecentMovements()])
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error)
-    } finally {
-      setRefreshing(false)
-    }
-  }
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       // Total products count
       const { count: totalProducts, error: countError } = await supabase
@@ -168,9 +135,9 @@ export default function DashboardPage() {
         recentMovements: 0
       })
     }
-  }
+  }, [supabase])
 
-  const fetchLowStockProducts = async () => {
+  const fetchLowStockProducts = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from("products")
@@ -185,21 +152,19 @@ export default function DashboardPage() {
     } catch (error) {
       console.error("Error fetching low stock products:", error)
     }
-  }
+  }, [supabase])
 
-  const fetchRecentMovements = async () => {
+  const fetchRecentMovements = useCallback(async () => {
     interface SupabaseMovementData {
       id: string
       movement_type: "IN" | "OUT" | "ADJUSTMENT"
       quantity: number
       movement_date: string
       reference_number?: string | null
-      products:
-        | {
-            name: string
-            sku: string
-          }[]
-        | null // Array of products, not a single object
+      products: {
+        name: string
+        sku: string
+      } | null // Single object, not array!
     }
 
     try {
@@ -207,16 +172,16 @@ export default function DashboardPage() {
         .from("stock_movements")
         .select(
           `
-          id,
-          movement_type,
-          quantity,
-          movement_date,
-          reference_number,
-          products (
-            name,
-            sku
-          )
-        `
+        id,
+        movement_type,
+        quantity,
+        movement_date,
+        reference_number,
+        products!inner (
+          name,
+          sku
+        )
+      `
         )
         .order("movement_date", { ascending: false })
         .limit(10)
@@ -224,25 +189,49 @@ export default function DashboardPage() {
       if (error) throw error
 
       const formattedMovements =
-        (data as SupabaseMovementData[])?.map((m) => {
-          const product = m.products && m.products.length > 0 ? m.products[0] : null
-
-          return {
-            id: m.id,
-            movement_type: m.movement_type,
-            quantity: m.quantity,
-            movement_date: m.movement_date,
-            product_name: product?.name || "Unknown",
-            product_sku: product?.sku || "",
-            reference_number: m.reference_number || undefined
-          }
-        }) || []
+        (data as unknown as SupabaseMovementData[])?.map((m) => ({
+          id: m.id,
+          movement_type: m.movement_type,
+          quantity: m.quantity,
+          movement_date: m.movement_date,
+          product_name: m.products?.name || "Unknown", // Direct access, no [0]
+          product_sku: m.products?.sku || "", // Direct access, no [0]
+          reference_number: m.reference_number || undefined
+        })) || []
 
       setRecentMovements(formattedMovements)
     } catch (error) {
       console.error("Error fetching recent movements:", error)
     }
-  }
+  }, [supabase])
+
+  const fetchDashboardData = useCallback(async () => {
+    setRefreshing(true)
+    try {
+      // Fetch all data in parallel
+      await Promise.all([fetchStats(), fetchLowStockProducts(), fetchRecentMovements()])
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error)
+    } finally {
+      setRefreshing(false)
+    }
+  }, [fetchStats, fetchLowStockProducts, fetchRecentMovements])
+
+  const checkUser = useCallback(async () => {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser()
+    if (!user) {
+      router.push("/login")
+    } else {
+      await fetchDashboardData()
+    }
+    setLoading(false)
+  }, [supabase, router, fetchDashboardData])
+
+  useEffect(() => {
+    checkUser()
+  }, [checkUser])
 
   const getMovementIcon = (type: string) => {
     switch (type) {
@@ -394,7 +383,7 @@ export default function DashboardPage() {
         {/* Two Column Layout - Now Three Columns on Desktop */}
         <Grid container spacing={3}>
           {/* Low Stock Products */}
-          <Grid columns={{ lg: 4, md: 6, xs: 12 }}>
+          <Grid columns={{ xs: 12, md: 6, lg: 4 }}>
             <Paper elevation={2} sx={{ p: 3, height: "100%" }}>
               <Typography variant="h6" fontWeight="bold" gutterBottom>
                 Low Stock Alert
@@ -451,7 +440,7 @@ export default function DashboardPage() {
           </Grid>
 
           {/* Recent Movements */}
-          <Grid columns={{ lg: 4, md: 6, xs: 12 }}>
+          <Grid columns={{ xs: 12, md: 6, lg: 4 }}>
             <Paper elevation={2} sx={{ p: 3, height: "100%" }}>
               <Typography variant="h6" fontWeight="bold" gutterBottom>
                 Recent Activity
@@ -492,7 +481,7 @@ export default function DashboardPage() {
                             label={`${movement.movement_type === "OUT" ? "-" : "+"}${movement.quantity}`}
                             size="small"
                             color={
-                              getMovementColor(movement.movement_type) as "success" | "error" | "warning" | "default"
+                              getMovementColor(movement.movement_type) as "success" | "warning" | "error" | "default"
                             }
                           />
                           <Typography variant="caption" display="block" color="textSecondary">
@@ -508,6 +497,89 @@ export default function DashboardPage() {
           </Grid>
 
           {/* Quick Actions & Summary - New Widget */}
+          <Grid columns={{ xs: 12, lg: 4 }}>
+            <Stack spacing={3}>
+              {/* Quick Actions Card */}
+              <Paper elevation={2} sx={{ p: 3 }}>
+                <Typography variant="h6" fontWeight="bold" gutterBottom>
+                  Quick Actions
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+                <Stack spacing={2}>
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    startIcon={<AddIcon />}
+                    onClick={() => router.push("/products")}
+                    sx={{ textTransform: "none", justifyContent: "flex-start" }}
+                  >
+                    Add New Product
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    startIcon={<AdjustmentIcon />}
+                    onClick={() => router.push("/movements")}
+                    sx={{ textTransform: "none", justifyContent: "flex-start" }}
+                  >
+                    Record Stock Movement
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    startIcon={<ReportIcon />}
+                    onClick={() => router.push("/reports")}
+                    sx={{ textTransform: "none", justifyContent: "flex-start" }}
+                  >
+                    Generate Reports
+                  </Button>
+                </Stack>
+              </Paper>
+
+              {/* Stock Summary Card */}
+              <Paper elevation={2} sx={{ p: 3 }}>
+                <Typography variant="h6" fontWeight="bold" gutterBottom>
+                  Stock Summary
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+                <Stack spacing={2}>
+                  <Box>
+                    <Typography variant="body2" color="textSecondary" gutterBottom>
+                      Total Products
+                    </Typography>
+                    <Typography variant="h4" fontWeight="bold">
+                      {stats.totalProducts}
+                    </Typography>
+                  </Box>
+                  <Divider />
+                  <Box>
+                    <Typography variant="body2" color="textSecondary" gutterBottom>
+                      Inventory Value
+                    </Typography>
+                    <Typography variant="h5" fontWeight="bold" color="success.main">
+                      {formatCurrency(stats.totalStockValue)}
+                    </Typography>
+                  </Box>
+                  {stats.lowStockProducts > 0 && (
+                    <>
+                      <Divider />
+                      <Box>
+                        <Typography variant="body2" color="textSecondary" gutterBottom>
+                          Needs Attention
+                        </Typography>
+                        <Chip
+                          label={`${stats.lowStockProducts} item${stats.lowStockProducts > 1 ? "s" : ""} low on stock`}
+                          color="error"
+                          size="small"
+                          icon={<WarningIcon />}
+                        />
+                      </Box>
+                    </>
+                  )}
+                </Stack>
+              </Paper>
+            </Stack>
+          </Grid>
         </Grid>
       </Box>
     </DashboardLayout>

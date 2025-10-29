@@ -1,10 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
 import DashboardLayout from "@/components/DashboardLayout"
 import { useRouter } from "next/navigation"
-import type { User } from "@supabase/supabase-js"
 import {
   Box,
   Typography,
@@ -106,7 +105,6 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export default function ReportsPage() {
-  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [tabValue, setTabValue] = useState(0)
   const [generating, setGenerating] = useState(false)
@@ -136,29 +134,8 @@ export default function ReportsPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
 
-  useEffect(() => {
-    checkUser()
-  }, [])
-
-  const checkUser = async () => {
-    const {
-      data: { user }
-    } = await supabase.auth.getUser()
-    if (!user) {
-      router.push("/login")
-    } else {
-      setUser(user)
-      await generateInventoryReport()
-    }
-    setLoading(false)
-  }
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue)
-  }
-
   // Generate Inventory Valuation Report
-  const generateInventoryReport = async () => {
+  const generateInventoryReport = useCallback(async () => {
     setGenerating(true)
     try {
       const { data, error } = await supabase
@@ -205,6 +182,26 @@ export default function ReportsPage() {
     } finally {
       setGenerating(false)
     }
+  }, [supabase])
+
+  const checkUser = useCallback(async () => {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser()
+    if (!user) {
+      router.push("/login")
+    } else {
+      await generateInventoryReport()
+    }
+    setLoading(false)
+  }, [supabase, router, generateInventoryReport])
+
+  useEffect(() => {
+    checkUser()
+  }, [checkUser])
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue)
   }
 
   // Generate Stock Movements Report
@@ -229,17 +226,17 @@ export default function ReportsPage() {
         .from("stock_movements")
         .select(
           `
-        id,
-        movement_type,
-        quantity,
-        reference_number,
-        movement_date,
-        notes,
-        products (
-          name,
-          sku
-        )
-      `
+          id,
+          movement_type,
+          quantity,
+          reference_number,
+          movement_date,
+          notes,
+          products (
+            name,
+            sku
+          )
+        `
         )
         .gte("movement_date", movementStartDate)
         .lte("movement_date", movementEndDate)
