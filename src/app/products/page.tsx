@@ -39,7 +39,20 @@ import {
   useMediaQuery,
   useTheme
 } from "@mui/material"
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Close as CloseIcon } from "@mui/icons-material"
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Close as CloseIcon,
+  Warehouse as WarehouseIcon
+} from "@mui/icons-material"
+
+interface Warehouse {
+  id: string
+  name: string
+  is_default: boolean
+  is_active: boolean
+}
 
 interface Product {
   id: string
@@ -51,9 +64,14 @@ interface Product {
   reorder_point: number | null
   unit_price: number | null
   category: string | null
+  warehouse_id: string
   custom_fields: Record<string, unknown> | null
   created_at: string
   current_stock: number
+  warehouses?: {
+    id: string
+    name: string
+  }
 }
 
 interface SnackbarState {
@@ -65,8 +83,10 @@ interface SnackbarState {
 export default function ProductsPage() {
   const [user, setUser] = useState<User | null>(null)
   const [products, setProducts] = useState<Product[]>([])
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>("all")
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -84,15 +104,45 @@ export default function ProductsPage() {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
   const isTablet = useMediaQuery(theme.breakpoints.down("md"))
 
+  const fetchWarehouses = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("warehouses")
+        .select("*")
+        .eq("is_active", true)
+        .order("is_default", { ascending: false })
+
+      if (error) throw error
+      setWarehouses(data || [])
+    } catch (error) {
+      console.error("Error fetching warehouses:", error)
+    }
+  }, [supabase])
+
   const fetchProducts = useCallback(
     async (userId: string) => {
       setLoading(true)
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from("products")
-          .select("*")
+          .select(
+            `
+            *,
+            warehouses:warehouse_id (
+              id,
+              name
+            )
+          `
+          )
           .eq("user_id", userId)
           .order("created_at", { ascending: false })
+
+        // Filter by warehouse if selected
+        if (selectedWarehouse && selectedWarehouse !== "all") {
+          query = query.eq("warehouse_id", selectedWarehouse)
+        }
+
+        const { data, error } = await query
 
         if (error) throw error
 
@@ -104,7 +154,7 @@ export default function ProductsPage() {
         setLoading(false)
       }
     },
-    [supabase]
+    [supabase, selectedWarehouse]
   )
 
   const checkUser = useCallback(async () => {
@@ -116,13 +166,20 @@ export default function ProductsPage() {
       router.push("/login")
     } else {
       setUser(user)
+      await fetchWarehouses()
       fetchProducts(user.id)
     }
-  }, [supabase, router, fetchProducts])
+  }, [supabase, router, fetchWarehouses, fetchProducts])
 
   useEffect(() => {
     checkUser()
   }, [checkUser])
+
+  useEffect(() => {
+    if (user) {
+      fetchProducts(user.id)
+    }
+  }, [selectedWarehouse, user, fetchProducts])
 
   const showSnackbar = (message: string, severity: "success" | "error" | "info" | "warning" = "success") => {
     setSnackbar({ open: true, message, severity })
@@ -201,25 +258,42 @@ export default function ProductsPage() {
         <Typography variant={isMobile ? "h5" : "h4"} fontWeight={600}>
           Products
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => {
-            setEditingProduct(null)
-            setShowAddModal(true)
-          }}
-          fullWidth={isMobile}
-          sx={{
-            bgcolor: "#667eea",
-            textTransform: "none",
-            fontWeight: 500,
-            "&:hover": {
-              bgcolor: "#5568d3"
-            }
-          }}
-        >
-          Add Product
-        </Button>
+        <Box display="flex" gap={2} flexWrap="wrap">
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel>Filter by Warehouse</InputLabel>
+            <Select
+              value={selectedWarehouse}
+              onChange={(e) => setSelectedWarehouse(e.target.value)}
+              label="Filter by Warehouse"
+            >
+              <MenuItem value="all">All Warehouses</MenuItem>
+              {warehouses.map((warehouse) => (
+                <MenuItem key={warehouse.id} value={warehouse.id}>
+                  {warehouse.name} {warehouse.is_default && "(Default)"}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => {
+              setEditingProduct(null)
+              setShowAddModal(true)
+            }}
+            fullWidth={isMobile}
+            sx={{
+              bgcolor: "#667eea",
+              textTransform: "none",
+              fontWeight: 500,
+              "&:hover": {
+                bgcolor: "#5568d3"
+              }
+            }}
+          >
+            Add Product
+          </Button>
+        </Box>
       </Box>
 
       {/* Search Bar */}
@@ -257,6 +331,7 @@ export default function ProductsPage() {
                   <TableRow sx={{ bgcolor: "#f9fafb" }}>
                     <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
                     {!isTablet && <TableCell sx={{ fontWeight: 600 }}>SKU</TableCell>}
+                    <TableCell sx={{ fontWeight: 600 }}>Warehouse</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Category</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Unit</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 600 }}>
@@ -275,6 +350,14 @@ export default function ProductsPage() {
                     <TableRow key={product.id} hover>
                       <TableCell sx={{ fontWeight: 500 }}>{product.name}</TableCell>
                       {!isTablet && <TableCell>{product.sku || "-"}</TableCell>}
+                      <TableCell>
+                        <Chip
+                          icon={<WarehouseIcon />}
+                          label={product.warehouses?.name || "N/A"}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </TableCell>
                       <TableCell>
                         <Chip label={product.category || "General"} size="small" variant="outlined" />
                       </TableCell>
@@ -344,6 +427,12 @@ export default function ProductsPage() {
                           {product.name}
                         </Typography>
                         <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 1, gap: 0.5 }}>
+                          <Chip
+                            icon={<WarehouseIcon />}
+                            label={product.warehouses?.name || "N/A"}
+                            size="small"
+                            variant="outlined"
+                          />
                           {product.reorder_point && product.current_stock <= product.reorder_point ? (
                             <Chip label={`Stock: ${product.current_stock} - Low`} size="small" color="error" />
                           ) : (
@@ -405,6 +494,7 @@ export default function ProductsPage() {
       <ProductModal
         open={showAddModal}
         product={editingProduct}
+        warehouses={warehouses}
         onClose={() => {
           setShowAddModal(false)
           setEditingProduct(null)
@@ -456,12 +546,13 @@ export default function ProductsPage() {
 interface ProductModalProps {
   open: boolean
   product: Product | null
+  warehouses: Warehouse[]
   onClose: () => void
   onSave: (message: string) => void
   userId: string
 }
 
-function ProductModal({ open, product, onClose, onSave, userId }: ProductModalProps) {
+function ProductModal({ open, product, warehouses, onClose, onSave, userId }: ProductModalProps) {
   const [formData, setFormData] = useState({
     name: product?.name || "",
     sku: product?.sku || "",
@@ -471,6 +562,7 @@ function ProductModal({ open, product, onClose, onSave, userId }: ProductModalPr
     category: product?.category || "General",
     unit_price: product?.unit_price?.toString() || "",
     reorder_point: product?.reorder_point?.toString() || "",
+    warehouse_id: product?.warehouse_id || "",
     initial_stock: ""
   })
   const [loading, setLoading] = useState(false)
@@ -490,9 +582,11 @@ function ProductModal({ open, product, onClose, onSave, userId }: ProductModalPr
         category: product.category || "General",
         unit_price: product.unit_price?.toString() || "",
         reorder_point: product.reorder_point?.toString() || "",
+        warehouse_id: product.warehouse_id || "",
         initial_stock: ""
       })
     } else {
+      const defaultWarehouse = warehouses.find((w) => w.is_default) || warehouses[0]
       setFormData({
         name: "",
         sku: "",
@@ -502,16 +596,23 @@ function ProductModal({ open, product, onClose, onSave, userId }: ProductModalPr
         category: "General",
         unit_price: "",
         reorder_point: "",
+        warehouse_id: defaultWarehouse?.id || "",
         initial_stock: ""
       })
     }
     setError("")
-  }, [product, open])
+  }, [product, open, warehouses])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError("")
+
+    if (!formData.warehouse_id) {
+      setError("Please select a warehouse")
+      setLoading(false)
+      return
+    }
 
     try {
       const productData = {
@@ -523,6 +624,7 @@ function ProductModal({ open, product, onClose, onSave, userId }: ProductModalPr
         category: formData.category || "General",
         unit_price: formData.unit_price ? parseFloat(formData.unit_price) : null,
         reorder_point: formData.reorder_point ? parseInt(formData.reorder_point) : null,
+        warehouse_id: formData.warehouse_id,
         user_id: userId
       }
 
@@ -546,6 +648,7 @@ function ProductModal({ open, product, onClose, onSave, userId }: ProductModalPr
           const { error: movementError } = await supabase.from("stock_movements").insert({
             user_id: userId,
             product_id: newProduct.id,
+            warehouse_id: formData.warehouse_id,
             movement_type: "IN",
             quantity: parseFloat(formData.initial_stock),
             notes: "Opening stock balance",
@@ -627,6 +730,21 @@ function ProductModal({ open, product, onClose, onSave, userId }: ProductModalPr
               onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
             />
           </Box>
+
+          <FormControl fullWidth required sx={{ mb: 2.5 }}>
+            <InputLabel>Warehouse *</InputLabel>
+            <Select
+              value={formData.warehouse_id}
+              label="Warehouse *"
+              onChange={(e) => setFormData({ ...formData, warehouse_id: e.target.value })}
+            >
+              {warehouses.map((warehouse) => (
+                <MenuItem key={warehouse.id} value={warehouse.id}>
+                  {warehouse.name} {warehouse.is_default && "(Default)"}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
           <FormControl fullWidth sx={{ mb: 2.5 }}>
             <InputLabel>Category *</InputLabel>

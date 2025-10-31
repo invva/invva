@@ -23,7 +23,11 @@ import {
   TableRow,
   Divider,
   Stack,
-  Button
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from "@mui/material"
 import {
   Inventory as InventoryIcon,
@@ -33,8 +37,19 @@ import {
   Warning as WarningIcon,
   Assessment as ReportIcon,
   Refresh as RefreshIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  Warehouse as WarehouseIcon
 } from "@mui/icons-material"
+
+// utils
+import { formatCurrencyShort } from "@/utils/format-currency.util"
+
+interface Warehouse {
+  id: string
+  name: string
+  is_default: boolean
+  is_active: boolean
+}
 
 interface DashboardStats {
   totalProducts: number
@@ -50,6 +65,9 @@ interface LowStockProduct {
   current_stock: number
   reorder_point: number
   unit_of_measure: string
+  warehouses?: {
+    name: string
+  }
 }
 
 interface RecentMovement {
@@ -59,11 +77,14 @@ interface RecentMovement {
   movement_date: string
   product_name: string
   product_sku: string
+  warehouse_name: string
   reference_number?: string
 }
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([])
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>("all")
   const [stats, setStats] = useState<DashboardStats>({
     totalProducts: 0,
     lowStockProducts: 0,
@@ -77,22 +98,45 @@ export default function DashboardPage() {
   const router = useRouter()
   const supabase = createClient()
 
+  const fetchWarehouses = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("warehouses")
+        .select("*")
+        .eq("is_active", true)
+        .order("is_default", { ascending: false })
+
+      if (error) throw error
+      setWarehouses(data || [])
+    } catch (error) {
+      console.error("Error fetching warehouses:", error)
+    }
+  }, [supabase])
+
   const fetchStats = useCallback(async () => {
     try {
-      // Total products count
-      const { count: totalProducts, error: countError } = await supabase
-        .from("products")
-        .select("*", { count: "exact", head: true })
+      // Build query for total products count
+      let productsCountQuery = supabase.from("products").select("*", { count: "exact", head: true })
+
+      if (selectedWarehouse !== "all") {
+        productsCountQuery = productsCountQuery.eq("warehouse_id", selectedWarehouse)
+      }
+
+      const { count: totalProducts, error: countError } = await productsCountQuery
 
       if (countError) {
         console.error("Error counting products:", countError)
         throw countError
       }
 
-      // Low stock products count and total value
-      const { data: products, error: productsError } = await supabase
-        .from("products")
-        .select("current_stock, reorder_point, unit_price")
+      // Build query for low stock products count and total value
+      let productsQuery = supabase.from("products").select("current_stock, reorder_point, unit_price")
+
+      if (selectedWarehouse !== "all") {
+        productsQuery = productsQuery.eq("warehouse_id", selectedWarehouse)
+      }
+
+      const { data: products, error: productsError } = await productsQuery
 
       if (productsError) {
         console.error("Error fetching products:", productsError)
@@ -101,22 +145,27 @@ export default function DashboardPage() {
 
       const lowStockCount = products?.filter((p) => p.current_stock <= p.reorder_point).length || 0
 
-      // Calculate total stock value (now using actual unit_price)
+      // Calculate total stock value
       const totalValue = products?.reduce((sum, p) => sum + p.current_stock * (p.unit_price || 0), 0) || 0
 
       // Recent movements count (last 7 days)
       const sevenDaysAgo = new Date()
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-      const dateString = sevenDaysAgo.toISOString().split("T")[0] // Format: YYYY-MM-DD
+      const dateString = sevenDaysAgo.toISOString().split("T")[0]
 
-      const { count: movementsCount, error: movementsError } = await supabase
+      let movementsQuery = supabase
         .from("stock_movements")
         .select("*", { count: "exact", head: true })
         .gte("movement_date", dateString)
 
+      if (selectedWarehouse !== "all") {
+        movementsQuery = movementsQuery.eq("warehouse_id", selectedWarehouse)
+      }
+
+      const { count: movementsCount, error: movementsError } = await movementsQuery
+
       if (movementsError) {
         console.error("Error counting movements:", movementsError)
-        // Don't throw - just set count to 0
       }
 
       setStats({
@@ -127,7 +176,6 @@ export default function DashboardPage() {
       })
     } catch (error) {
       console.error("Error fetching stats:", error)
-      // Set default stats on error
       setStats({
         totalProducts: 0,
         lowStockProducts: 0,
@@ -135,24 +183,50 @@ export default function DashboardPage() {
         recentMovements: 0
       })
     }
-  }, [supabase])
+  }, [supabase, selectedWarehouse])
 
   const fetchLowStockProducts = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("products")
-        .select("id, name, sku, current_stock, reorder_point, unit_of_measure")
+        .select(
+          `
+          id, 
+          name, 
+          sku, 
+          current_stock, 
+          reorder_point, 
+          unit_of_measure,
+          warehouses:warehouse_id (
+            name
+          )
+        `
+        )
         .order("current_stock", { ascending: true })
+
+      if (selectedWarehouse !== "all") {
+        query = query.eq("warehouse_id", selectedWarehouse)
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
 
       // Filter on the client side where current_stock <= reorder_point
       const lowStock = data?.filter((p) => p.current_stock <= p.reorder_point) || []
-      setLowStockProducts(lowStock.slice(0, 5)) // Take only first 5
+
+      // Transform the data to match the LowStockProduct interface
+      const transformedLowStock = lowStock.map((product) => ({
+        ...product,
+        warehouses:
+          Array.isArray(product.warehouses) && product.warehouses.length > 0 ? product.warehouses[0] : undefined
+      }))
+
+      setLowStockProducts(transformedLowStock.slice(0, 5))
     } catch (error) {
       console.error("Error fetching low stock products:", error)
     }
-  }, [supabase])
+  }, [supabase, selectedWarehouse])
 
   const fetchRecentMovements = useCallback(async () => {
     interface SupabaseMovementData {
@@ -164,11 +238,14 @@ export default function DashboardPage() {
       products: {
         name: string
         sku: string
-      } | null // Single object, not array!
+      } | null
+      warehouses: {
+        name: string
+      } | null
     }
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("stock_movements")
         .select(
           `
@@ -180,11 +257,20 @@ export default function DashboardPage() {
         products!inner (
           name,
           sku
+        ),
+        warehouses:warehouse_id (
+          name
         )
       `
         )
         .order("movement_date", { ascending: false })
         .limit(10)
+
+      if (selectedWarehouse !== "all") {
+        query = query.eq("warehouse_id", selectedWarehouse)
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
 
@@ -194,8 +280,9 @@ export default function DashboardPage() {
           movement_type: m.movement_type,
           quantity: m.quantity,
           movement_date: m.movement_date,
-          product_name: m.products?.name || "Unknown", // Direct access, no [0]
-          product_sku: m.products?.sku || "", // Direct access, no [0]
+          product_name: m.products?.name || "Unknown",
+          product_sku: m.products?.sku || "",
+          warehouse_name: m.warehouses?.name || "N/A",
           reference_number: m.reference_number || undefined
         })) || []
 
@@ -203,12 +290,11 @@ export default function DashboardPage() {
     } catch (error) {
       console.error("Error fetching recent movements:", error)
     }
-  }, [supabase])
+  }, [supabase, selectedWarehouse])
 
   const fetchDashboardData = useCallback(async () => {
     setRefreshing(true)
     try {
-      // Fetch all data in parallel
       await Promise.all([fetchStats(), fetchLowStockProducts(), fetchRecentMovements()])
     } catch (error) {
       console.error("Error fetching dashboard data:", error)
@@ -224,14 +310,21 @@ export default function DashboardPage() {
     if (!user) {
       router.push("/login")
     } else {
+      await fetchWarehouses()
       await fetchDashboardData()
     }
     setLoading(false)
-  }, [supabase, router, fetchDashboardData])
+  }, [supabase, router, fetchWarehouses, fetchDashboardData])
 
   useEffect(() => {
     checkUser()
   }, [checkUser])
+
+  useEffect(() => {
+    if (!loading && warehouses.length > 0) {
+      fetchDashboardData()
+    }
+  }, [selectedWarehouse, loading, warehouses, fetchDashboardData])
 
   const getMovementIcon = (type: string) => {
     switch (type) {
@@ -259,13 +352,6 @@ export default function DashboardPage() {
     }
   }
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD"
-    }).format(value)
-  }
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
@@ -289,19 +375,48 @@ export default function DashboardPage() {
     <DashboardLayout>
       <Box sx={{ flexGrow: 1 }}>
         {/* Header */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={2}>
           <Typography variant="h4" component="h1" fontWeight="bold">
             Dashboard
           </Typography>
-          <IconButton onClick={fetchDashboardData} disabled={refreshing} color="primary">
-            <RefreshIcon />
-          </IconButton>
+          <Box display="flex" gap={2} alignItems="center">
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <InputLabel>Filter by Warehouse</InputLabel>
+              <Select
+                value={selectedWarehouse}
+                onChange={(e) => setSelectedWarehouse(e.target.value)}
+                label="Filter by Warehouse"
+              >
+                <MenuItem value="all">All Warehouses</MenuItem>
+                {warehouses.map((warehouse) => (
+                  <MenuItem key={warehouse.id} value={warehouse.id}>
+                    {warehouse.name} {warehouse.is_default && "(Default)"}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <IconButton onClick={fetchDashboardData} disabled={refreshing} color="primary">
+              <RefreshIcon />
+            </IconButton>
+          </Box>
         </Box>
 
+        {/* Selected Warehouse Badge */}
+        {selectedWarehouse !== "all" && (
+          <Box mb={3}>
+            <Chip
+              icon={<WarehouseIcon />}
+              label={`Viewing: ${warehouses.find((w) => w.id === selectedWarehouse)?.name || "Unknown Warehouse"}`}
+              color="primary"
+              onDelete={() => setSelectedWarehouse("all")}
+            />
+          </Box>
+        )}
+
         {/* Stats Cards */}
-        <Grid container spacing={3} mb={4}>
+        <Grid container spacing={3} mb={3}>
           {/* Total Products */}
-          <Grid columns={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card elevation={2}>
               <CardContent>
                 <Box display="flex" alignItems="center" mb={2}>
@@ -320,7 +435,7 @@ export default function DashboardPage() {
           </Grid>
 
           {/* Low Stock Alert */}
-          <Grid columns={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card
               elevation={2}
               sx={{ borderLeft: stats.lowStockProducts > 0 ? "4px solid" : "none", borderColor: "error.main" }}
@@ -342,7 +457,7 @@ export default function DashboardPage() {
           </Grid>
 
           {/* Total Stock Value */}
-          <Grid columns={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card elevation={2}>
               <CardContent>
                 <Box display="flex" alignItems="center" mb={2}>
@@ -351,8 +466,8 @@ export default function DashboardPage() {
                     <Typography color="textSecondary" variant="body2">
                       Total Stock Value
                     </Typography>
-                    <Typography variant="h5" fontWeight="bold">
-                      {formatCurrency(stats.totalStockValue)}
+                    <Typography variant="h4" fontWeight="bold">
+                      {formatCurrencyShort(stats.totalStockValue, { currency: "USD", decimals: 2 })}
                     </Typography>
                   </Box>
                 </Box>
@@ -361,7 +476,7 @@ export default function DashboardPage() {
           </Grid>
 
           {/* Recent Movements */}
-          <Grid columns={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card elevation={2}>
               <CardContent>
                 <Box display="flex" alignItems="center" mb={2}>
@@ -380,10 +495,10 @@ export default function DashboardPage() {
           </Grid>
         </Grid>
 
-        {/* Two Column Layout - Now Three Columns on Desktop */}
+        {/* Three Column Layout */}
         <Grid container spacing={3}>
           {/* Low Stock Products */}
-          <Grid columns={{ xs: 12, md: 6, lg: 4 }}>
+          <Grid size={{ xs: 12, md: 6, lg: 4 }}>
             <Paper elevation={2} sx={{ p: 3, height: "100%" }}>
               <Typography variant="h6" fontWeight="bold" gutterBottom>
                 Low Stock Alert
@@ -413,6 +528,11 @@ export default function DashboardPage() {
                             <Typography variant="caption" color="textSecondary">
                               {product.sku}
                             </Typography>
+                            {selectedWarehouse === "all" && product.warehouses && (
+                              <Typography variant="caption" display="block" color="primary">
+                                📦 {product.warehouses.name}
+                              </Typography>
+                            )}
                           </TableCell>
                           <TableCell align="center">
                             <Chip
@@ -440,8 +560,8 @@ export default function DashboardPage() {
           </Grid>
 
           {/* Recent Movements */}
-          <Grid columns={{ xs: 12, md: 6, lg: 4 }}>
-            <Paper elevation={2} sx={{ p: 3, height: "100%" }}>
+          <Grid size={{ xs: 12, md: 6, lg: 4 }}>
+            <Paper elevation={1} sx={{ p: 3, height: "100%" }}>
               <Typography variant="h6" fontWeight="bold" gutterBottom>
                 Recent Activity
               </Typography>
@@ -450,7 +570,7 @@ export default function DashboardPage() {
               {recentMovements.length === 0 ? (
                 <Alert severity="info">No recent stock movements</Alert>
               ) : (
-                <Box sx={{ maxHeight: 400, overflow: "auto" }}>
+                <Box sx={{ maxHeight: { xs: 200, md: 300, lg: 450 }, overflow: "auto" }}>
                   {recentMovements.map((movement) => (
                     <Box
                       key={movement.id}
@@ -475,6 +595,11 @@ export default function DashboardPage() {
                             {movement.product_sku}
                             {movement.reference_number && ` • Ref: ${movement.reference_number}`}
                           </Typography>
+                          {selectedWarehouse === "all" && (
+                            <Typography variant="caption" display="block" color="primary">
+                              📦 {movement.warehouse_name}
+                            </Typography>
+                          )}
                         </Box>
                         <Box textAlign="right">
                           <Chip
@@ -496,8 +621,8 @@ export default function DashboardPage() {
             </Paper>
           </Grid>
 
-          {/* Quick Actions & Summary - New Widget */}
-          <Grid columns={{ xs: 12, lg: 4 }}>
+          {/* Quick Actions & Summary */}
+          <Grid size={{ xs: 12, lg: 4 }}>
             <Stack spacing={3}>
               {/* Quick Actions Card */}
               <Paper elevation={2} sx={{ p: 3 }}>
@@ -533,6 +658,15 @@ export default function DashboardPage() {
                   >
                     Generate Reports
                   </Button>
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    startIcon={<WarehouseIcon />}
+                    onClick={() => router.push("/warehouses")}
+                    sx={{ textTransform: "none", justifyContent: "flex-start" }}
+                  >
+                    Manage Warehouses
+                  </Button>
                 </Stack>
               </Paper>
 
@@ -540,6 +674,13 @@ export default function DashboardPage() {
               <Paper elevation={2} sx={{ p: 3 }}>
                 <Typography variant="h6" fontWeight="bold" gutterBottom>
                   Stock Summary
+                  {selectedWarehouse !== "all" && (
+                    <Chip
+                      label={warehouses.find((w) => w.id === selectedWarehouse)?.name}
+                      size="small"
+                      sx={{ ml: 1 }}
+                    />
+                  )}
                 </Typography>
                 <Divider sx={{ mb: 2 }} />
                 <Stack spacing={2}>
@@ -557,7 +698,7 @@ export default function DashboardPage() {
                       Inventory Value
                     </Typography>
                     <Typography variant="h5" fontWeight="bold" color="success.main">
-                      {formatCurrency(stats.totalStockValue)}
+                      {formatCurrencyShort(stats.totalStockValue, { currency: "USD", decimals: 2 })}
                     </Typography>
                   </Box>
                   {stats.lowStockProducts > 0 && (
