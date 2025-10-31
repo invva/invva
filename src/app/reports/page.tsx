@@ -557,7 +557,9 @@ export default function ReportsPage() {
                       type="date"
                       value={movementStartDate}
                       onChange={(e) => setMovementStartDate(e.target.value)}
-                      InputLabelProps={{ shrink: true }}
+                      slotProps={{
+                        inputLabel: { shrink: true }
+                      }}
                     />
                   </Grid>
                   <Grid columns={{ xs: 12, sm: 4 }}>
@@ -567,7 +569,9 @@ export default function ReportsPage() {
                       type="date"
                       value={movementEndDate}
                       onChange={(e) => setMovementEndDate(e.target.value)}
-                      InputLabelProps={{ shrink: true }}
+                      slotProps={{
+                        inputLabel: { shrink: true }
+                      }}
                     />
                   </Grid>
                   <Grid columns={{ xs: 12, sm: 4 }}>
