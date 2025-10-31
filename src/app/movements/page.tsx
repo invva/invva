@@ -35,18 +35,33 @@ import {
   useTheme,
   useMediaQuery
 } from "@mui/material"
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Close as CloseIcon } from "@mui/icons-material"
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Close as CloseIcon,
+  Warehouse as WarehouseIcon
+} from "@mui/icons-material"
+
+interface Warehouse {
+  id: string
+  name: string
+  is_default: boolean
+  is_active: boolean
+}
 
 interface Product {
   id: string
   name: string
   sku: string
   current_stock: number
+  warehouse_id: string
 }
 
 interface StockMovement {
   id: string
   product_id: string
+  warehouse_id: string
   movement_type: "IN" | "OUT" | "ADJUSTMENT"
   quantity: number
   reference_number?: string
@@ -57,10 +72,15 @@ interface StockMovement {
     name: string
     sku: string
   }
+  warehouses?: {
+    id: string
+    name: string
+  }
 }
 
 interface MovementFormData {
   product_id: string
+  warehouse_id: string
   movement_type: "IN" | "OUT" | "ADJUSTMENT"
   quantity: number
   reference_number: string
@@ -71,6 +91,8 @@ interface MovementFormData {
 export default function StockMovementsPage() {
   const [movements, setMovements] = useState<StockMovement[]>([])
   const [products, setProducts] = useState<Product[]>([])
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([])
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [openDialog, setOpenDialog] = useState(false)
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false)
@@ -78,6 +100,7 @@ export default function StockMovementsPage() {
   const [deletingMovement, setDeletingMovement] = useState<StockMovement | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState<string>("ALL")
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>("all")
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -87,6 +110,7 @@ export default function StockMovementsPage() {
 
   const [formData, setFormData] = useState<MovementFormData>({
     product_id: "",
+    warehouse_id: "",
     movement_type: "IN",
     quantity: 0,
     reference_number: "",
@@ -104,10 +128,25 @@ export default function StockMovementsPage() {
     setSnackbar({ open: true, message, severity })
   }, [])
 
+  const fetchWarehouses = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("warehouses")
+        .select("*")
+        .eq("is_active", true)
+        .order("is_default", { ascending: false })
+
+      if (error) throw error
+      setWarehouses(data || [])
+    } catch (error) {
+      console.error("Error fetching warehouses:", error)
+    }
+  }, [supabase])
+
   const fetchMovements = useCallback(async () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("stock_movements")
         .select(
           `
@@ -115,10 +154,21 @@ export default function StockMovementsPage() {
           products (
             name,
             sku
+          ),
+          warehouses:warehouse_id (
+            id,
+            name
           )
         `
         )
         .order("movement_date", { ascending: false })
+
+      // Filter by warehouse if selected
+      if (selectedWarehouse && selectedWarehouse !== "all") {
+        query = query.eq("warehouse_id", selectedWarehouse)
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
       setMovements(data || [])
@@ -128,11 +178,14 @@ export default function StockMovementsPage() {
     } finally {
       setLoading(false)
     }
-  }, [supabase, showSnackbar])
+  }, [supabase, showSnackbar, selectedWarehouse])
 
   const fetchProducts = useCallback(async () => {
     try {
-      const { data, error } = await supabase.from("products").select("id, name, sku, current_stock").order("name")
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name, sku, current_stock, warehouse_id")
+        .order("name")
 
       if (error) throw error
       setProducts(data || [])
@@ -149,19 +202,46 @@ export default function StockMovementsPage() {
     if (!user) {
       router.push("/login")
     } else {
-      await Promise.all([fetchMovements(), fetchProducts()])
+      await Promise.all([fetchWarehouses(), fetchMovements(), fetchProducts()])
     }
-  }, [supabase, router, fetchMovements, fetchProducts])
+  }, [supabase, router, fetchWarehouses, fetchMovements, fetchProducts])
 
   useEffect(() => {
     checkUserAndFetchData()
   }, [checkUserAndFetchData])
+
+  useEffect(() => {
+    // Only refetch when warehouse changes after initial load
+    if (!loading && movements.length > 0) {
+      fetchMovements()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedWarehouse])
+
+  useEffect(() => {
+    // Filter products by selected warehouse in form
+    if (formData.warehouse_id) {
+      const filtered = products.filter((p) => p.warehouse_id === formData.warehouse_id)
+      setFilteredProducts(filtered)
+
+      // Reset product selection if current product doesn't match warehouse
+      if (formData.product_id) {
+        const productInWarehouse = filtered.find((p) => p.id === formData.product_id)
+        if (!productInWarehouse) {
+          setFormData((prev) => ({ ...prev, product_id: "" }))
+        }
+      }
+    } else {
+      setFilteredProducts(products)
+    }
+  }, [formData.warehouse_id, products, formData.product_id])
 
   const handleOpenDialog = (movement?: StockMovement) => {
     if (movement) {
       setEditingMovement(movement)
       setFormData({
         product_id: movement.product_id,
+        warehouse_id: movement.warehouse_id,
         movement_type: movement.movement_type,
         quantity: movement.quantity,
         reference_number: movement.reference_number || "",
@@ -170,8 +250,10 @@ export default function StockMovementsPage() {
       })
     } else {
       setEditingMovement(null)
+      const defaultWarehouse = warehouses.find((w) => w.is_default) || warehouses[0]
       setFormData({
         product_id: "",
+        warehouse_id: defaultWarehouse?.id || "",
         movement_type: "IN",
         quantity: 0,
         reference_number: "",
@@ -187,11 +269,28 @@ export default function StockMovementsPage() {
     setEditingMovement(null)
   }
 
-  const handleSaveMovement = async () => {
-    if (!formData.product_id || formData.quantity <= 0) {
+  const validateMovement = async (): Promise<boolean> => {
+    if (!formData.product_id || !formData.warehouse_id || formData.quantity <= 0) {
       showSnackbar("Please fill in all required fields", "warning")
-      return
+      return false
     }
+
+    // For OUT movements, check if enough stock available in the warehouse
+    if (formData.movement_type === "OUT") {
+      const product = products.find((p) => p.id === formData.product_id)
+      if (product && product.warehouse_id === formData.warehouse_id) {
+        if (product.current_stock < formData.quantity) {
+          showSnackbar(`Insufficient stock in this warehouse. Available: ${product.current_stock}`, "error")
+          return false
+        }
+      }
+    }
+
+    return true
+  }
+
+  const handleSaveMovement = async () => {
+    if (!(await validateMovement())) return
 
     try {
       const {
@@ -203,33 +302,26 @@ export default function StockMovementsPage() {
         return
       }
 
+      const movementData = {
+        user_id: user.id,
+        product_id: formData.product_id,
+        warehouse_id: formData.warehouse_id,
+        movement_type: formData.movement_type,
+        quantity: formData.quantity,
+        reference_number: formData.reference_number || null,
+        notes: formData.notes || null,
+        movement_date: formData.movement_date
+      }
+
       if (editingMovement) {
         // Update existing movement
-        const { error } = await supabase
-          .from("stock_movements")
-          .update({
-            product_id: formData.product_id,
-            movement_type: formData.movement_type,
-            quantity: formData.quantity,
-            reference_number: formData.reference_number,
-            notes: formData.notes,
-            movement_date: formData.movement_date
-          })
-          .eq("id", editingMovement.id)
+        const { error } = await supabase.from("stock_movements").update(movementData).eq("id", editingMovement.id)
 
         if (error) throw error
         showSnackbar("Stock movement updated successfully", "success")
       } else {
         // Create new movement
-        const { error } = await supabase.from("stock_movements").insert({
-          user_id: user.id,
-          product_id: formData.product_id,
-          movement_type: formData.movement_type,
-          quantity: formData.quantity,
-          reference_number: formData.reference_number,
-          notes: formData.notes,
-          movement_date: formData.movement_date
-        })
+        const { error } = await supabase.from("stock_movements").insert(movementData)
 
         if (error) throw error
         showSnackbar("Stock movement created successfully", "success")
@@ -237,6 +329,7 @@ export default function StockMovementsPage() {
 
       handleCloseDialog()
       fetchMovements()
+      fetchProducts() // Refresh to show updated stock levels
     } catch (error) {
       console.error("Error saving movement:", error)
       showSnackbar("Error saving stock movement", "error")
@@ -263,6 +356,7 @@ export default function StockMovementsPage() {
       showSnackbar("Stock movement deleted successfully", "success")
       handleCloseDeleteDialog()
       fetchMovements()
+      fetchProducts() // Refresh to show updated stock levels
     } catch (error) {
       console.error("Error deleting movement:", error)
       showSnackbar("Error deleting stock movement", "error")
@@ -322,15 +416,32 @@ export default function StockMovementsPage() {
           <Typography variant="h4" component="h1">
             Stock Movements
           </Typography>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDialog()} fullWidth={isMobile}>
-            Add Movement
-          </Button>
+          <Box display="flex" gap={2} flexWrap="wrap">
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <InputLabel>Filter by Warehouse</InputLabel>
+              <Select
+                value={selectedWarehouse}
+                onChange={(e) => setSelectedWarehouse(e.target.value)}
+                label="Filter by Warehouse"
+              >
+                <MenuItem value="all">All Warehouses</MenuItem>
+                {warehouses.map((warehouse) => (
+                  <MenuItem key={warehouse.id} value={warehouse.id}>
+                    {warehouse.name} {warehouse.is_default && "(Default)"}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDialog()} fullWidth={isMobile}>
+              Add Movement
+            </Button>
+          </Box>
         </Box>
 
         {/* Filters */}
         <Paper sx={{ p: 2, mb: 3 }}>
           <Grid container spacing={2}>
-            <Grid columns={{ xs: 12, sm: 6, md: 8 }}>
+            <Grid size={{ xs: 12, sm: 6, md: 8 }}>
               <TextField
                 fullWidth
                 label="Search by product or reference"
@@ -339,7 +450,7 @@ export default function StockMovementsPage() {
                 size="small"
               />
             </Grid>
-            <Grid columns={{ xs: 12, sm: 6, md: 8 }}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
               <FormControl fullWidth size="small">
                 <InputLabel>Movement Type</InputLabel>
                 <Select value={filterType} label="Movement Type" onChange={(e) => setFilterType(e.target.value)}>
@@ -376,6 +487,13 @@ export default function StockMovementsPage() {
                   </Box>
 
                   <Box mb={2}>
+                    <Chip
+                      icon={<WarehouseIcon />}
+                      label={movement.warehouses?.name || "N/A"}
+                      size="small"
+                      variant="outlined"
+                      sx={{ mb: 1 }}
+                    />
                     <Typography variant="body2">
                       <strong>Quantity:</strong> {movement.quantity}
                     </Typography>
@@ -421,6 +539,7 @@ export default function StockMovementsPage() {
                   <TableCell>Type</TableCell>
                   <TableCell>Product</TableCell>
                   {!isTablet && <TableCell>SKU</TableCell>}
+                  <TableCell>Warehouse</TableCell>
                   <TableCell align="right">Quantity</TableCell>
                   {!isTablet && <TableCell>Reference</TableCell>}
                   <TableCell>Date</TableCell>
@@ -440,6 +559,14 @@ export default function StockMovementsPage() {
                     </TableCell>
                     <TableCell>{movement.products?.name}</TableCell>
                     {!isTablet && <TableCell>{movement.products?.sku}</TableCell>}
+                    <TableCell>
+                      <Chip
+                        icon={<WarehouseIcon />}
+                        label={movement.warehouses?.name || "N/A"}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </TableCell>
                     <TableCell align="right">{movement.quantity}</TableCell>
                     {!isTablet && <TableCell>{movement.reference_number || "-"}</TableCell>}
                     <TableCell>{new Date(movement.movement_date).toLocaleDateString()}</TableCell>
@@ -466,7 +593,7 @@ export default function StockMovementsPage() {
         {filteredMovements.length === 0 && (
           <Paper sx={{ p: 4, textAlign: "center" }}>
             <Typography color="text.secondary">
-              No stock movements found. Click &rdquo;Add Movement&rdquo; to create one.
+              No stock movements found. Click &ldquo;Add Movement&rdquo; to create one.
             </Typography>
           </Paper>
         )}
@@ -487,18 +614,39 @@ export default function StockMovementsPage() {
         <DialogContent>
           <Box sx={{ pt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
             <FormControl fullWidth required>
+              <InputLabel>Warehouse</InputLabel>
+              <Select
+                value={formData.warehouse_id}
+                label="Warehouse"
+                onChange={(e) => setFormData({ ...formData, warehouse_id: e.target.value })}
+              >
+                {warehouses.map((warehouse) => (
+                  <MenuItem key={warehouse.id} value={warehouse.id}>
+                    {warehouse.name} {warehouse.is_default && "(Default)"}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth required>
               <InputLabel>Product</InputLabel>
               <Select
                 value={formData.product_id}
                 label="Product"
                 onChange={(e) => setFormData({ ...formData, product_id: e.target.value })}
+                disabled={!formData.warehouse_id}
               >
-                {products.map((product) => (
+                {filteredProducts.map((product) => (
                   <MenuItem key={product.id} value={product.id}>
-                    {product.name} {product.sku && `(${product.sku})`} - Stock: {product.current_stock}
+                    {product.name} ({product.sku}) - Stock: {product.current_stock}
                   </MenuItem>
                 ))}
               </Select>
+              {!formData.warehouse_id && (
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.5 }}>
+                  Select a warehouse first
+                </Typography>
+              )}
             </FormControl>
 
             <FormControl fullWidth required>
@@ -527,6 +675,11 @@ export default function StockMovementsPage() {
               value={formData.quantity}
               onChange={(e) => setFormData({ ...formData, quantity: parseFloat(e.target.value) })}
               inputProps={{ min: 0, step: 1 }}
+              helperText={
+                formData.movement_type === "ADJUSTMENT"
+                  ? "Enter positive number to add, negative to subtract"
+                  : "Enter quantity"
+              }
             />
 
             <TextField

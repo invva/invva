@@ -39,6 +39,9 @@ import {
   Assessment as ReportIcon
 } from "@mui/icons-material"
 
+// utils
+import { formatCurrencyShort, formatCurrency } from "@/utils/format-currency.util"
+
 interface TabPanelProps {
   children?: React.ReactNode
   index: number
@@ -329,13 +332,6 @@ export default function ReportsPage() {
     window.URL.revokeObjectURL(url)
   }
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD"
-    }).format(value)
-  }
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -421,7 +417,7 @@ export default function ReportsPage() {
                           Total Inventory Value
                         </Typography>
                         <Typography variant="h4" fontWeight="bold" color="primary">
-                          {formatCurrency(totalInventoryValue)}
+                          {formatCurrencyShort(totalInventoryValue, { currency: "USD", decimals: 2 })}
                         </Typography>
                       </CardContent>
                     </Card>
