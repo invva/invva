@@ -43,6 +43,7 @@ export default function Header() {
     { href: "/movements", label: "Stock Movements" },
     { href: "/reports", label: "Reports" },
     { href: "/warehouses", label: "Warehouses" },
+    { href: "/suppliers", label: "Suppliers" },
     { href: "/audit-logs", label: "Audit Log" }
   ]
 

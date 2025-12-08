@@ -56,6 +56,10 @@ interface Product {
   sku: string
   current_stock: number
   warehouse_id: string
+  supplier?: {
+    id: string
+    name: string
+  }
 }
 
 interface StockMovement {
@@ -71,6 +75,10 @@ interface StockMovement {
   products?: {
     name: string
     sku: string
+    supplier?: {
+      id: string
+      name: string
+    }
   }
   warehouses?: {
     id: string
@@ -153,7 +161,8 @@ export default function StockMovementsPage() {
           *,
           products (
             name,
-            sku
+            sku,
+            supplier:suppliers(id, name)
           ),
           warehouses:warehouse_id (
             id,
@@ -478,6 +487,11 @@ export default function StockMovementsPage() {
                       <Typography variant="body2" color="text.secondary">
                         SKU: {movement.products?.sku}
                       </Typography>
+                      {movement.products?.supplier && (
+                        <Typography variant="body2" color="text.secondary">
+                          Supplier: {movement.products.supplier.name}
+                        </Typography>
+                      )}
                     </Box>
                     <Chip
                       label={movement.movement_type}
@@ -539,6 +553,7 @@ export default function StockMovementsPage() {
                   <TableCell>Type</TableCell>
                   <TableCell>Product</TableCell>
                   {!isTablet && <TableCell>SKU</TableCell>}
+                  {!isTablet && <TableCell>Supplier</TableCell>}
                   <TableCell>Warehouse</TableCell>
                   <TableCell align="right">Quantity</TableCell>
                   {!isTablet && <TableCell>Reference</TableCell>}
@@ -559,6 +574,19 @@ export default function StockMovementsPage() {
                     </TableCell>
                     <TableCell>{movement.products?.name}</TableCell>
                     {!isTablet && <TableCell>{movement.products?.sku}</TableCell>}
+                    {!isTablet && (
+                      <TableCell>
+                        {movement.products?.supplier ? (
+                          <Typography variant="body2" fontWeight={500}>
+                            {movement.products.supplier.name}
+                          </Typography>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            -
+                          </Typography>
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell>
                       <Chip
                         icon={<WarehouseIcon />}

@@ -561,7 +561,7 @@ export default function DashboardPage() {
 
           {/* Recent Movements */}
           <Grid size={{ xs: 12, md: 6, lg: 4 }}>
-            <Paper elevation={1} sx={{ p: 3, height: "100%" }}>
+            <Paper elevation={1} sx={{ p: 3, height: "100%", display: "flex", flexDirection: "column" }}>
               <Typography variant="h6" fontWeight="bold" gutterBottom>
                 Recent Activity
               </Typography>
@@ -570,7 +570,13 @@ export default function DashboardPage() {
               {recentMovements.length === 0 ? (
                 <Alert severity="info">No recent stock movements</Alert>
               ) : (
-                <Box sx={{ maxHeight: { xs: 200, md: 300, lg: 450 }, overflow: "auto" }}>
+                <Box
+                  sx={{
+                    flexGrow: 1,
+                    overflow: "auto",
+                    minHeight: 0
+                  }}
+                >
                   {recentMovements.map((movement) => (
                     <Box
                       key={movement.id}
