@@ -72,6 +72,19 @@ interface Product {
     id: string
     name: string
   }
+  supplier_id: string | null
+  supplier?: {
+    id: string
+    name: string
+    email: string
+    phone: string
+  }
+}
+
+interface Supplier {
+  id: string
+  name: string
+  is_active: boolean
 }
 
 interface SnackbarState {
@@ -84,6 +97,7 @@ export default function ProductsPage() {
   const [user, setUser] = useState<User | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [warehouses, setWarehouses] = useState<Warehouse[]>([])
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>("all")
@@ -103,6 +117,18 @@ export default function ProductsPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
   const isTablet = useMediaQuery(theme.breakpoints.down("md"))
+
+  const fetchSuppliers = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("suppliers")
+      .select("id, name, is_active")
+      .eq("is_active", true)
+      .order("name", { ascending: true })
+
+    if (!error && data) {
+      setSuppliers(data)
+    }
+  }, [supabase])
 
   const fetchWarehouses = useCallback(async () => {
     try {
@@ -131,7 +157,8 @@ export default function ProductsPage() {
             warehouses:warehouse_id (
               id,
               name
-            )
+            ),
+            supplier:suppliers(id, name, email, phone)
           `
           )
           .eq("user_id", userId)
@@ -167,9 +194,10 @@ export default function ProductsPage() {
     } else {
       setUser(user)
       await fetchWarehouses()
+      await fetchSuppliers()
       fetchProducts(user.id)
     }
-  }, [supabase, router, fetchWarehouses, fetchProducts])
+  }, [supabase, router, fetchWarehouses, fetchProducts, fetchSuppliers])
 
   useEffect(() => {
     checkUser()
@@ -332,7 +360,8 @@ export default function ProductsPage() {
                     <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
                     {!isTablet && <TableCell sx={{ fontWeight: 600 }}>SKU</TableCell>}
                     <TableCell sx={{ fontWeight: 600 }}>Warehouse</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Category</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Supplier</TableCell> {/* ✅ CORRECT */}
+                    <TableCell sx={{ fontWeight: 600 }}>Category</TableCell> {/* ✅ ADD THIS */}
                     <TableCell sx={{ fontWeight: 600 }}>Unit</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 600 }}>
                       Price
@@ -357,6 +386,24 @@ export default function ProductsPage() {
                           size="small"
                           variant="outlined"
                         />
+                      </TableCell>
+                      <TableCell>
+                        {product.supplier ? (
+                          <Box>
+                            <Typography variant="body2" fontWeight={500}>
+                              {product.supplier.name}
+                            </Typography>
+                            {product.supplier.email && (
+                              <Typography variant="caption" color="text.secondary">
+                                {product.supplier.email}
+                              </Typography>
+                            )}
+                          </Box>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            No supplier
+                          </Typography>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Chip label={product.category || "General"} size="small" variant="outlined" />
@@ -458,6 +505,11 @@ export default function ProductsPage() {
                           Barcode: {product.barcode}
                         </Typography>
                       )}
+                      {product.supplier && (
+                        <Typography variant="body2" color="text.secondary">
+                          Supplier: <strong>{product.supplier.name}</strong>
+                        </Typography>
+                      )}
                     </Box>
                   </CardContent>
 
@@ -495,6 +547,7 @@ export default function ProductsPage() {
         open={showAddModal}
         product={editingProduct}
         warehouses={warehouses}
+        suppliers={suppliers}
         onClose={() => {
           setShowAddModal(false)
           setEditingProduct(null)
@@ -547,12 +600,13 @@ interface ProductModalProps {
   open: boolean
   product: Product | null
   warehouses: Warehouse[]
+  suppliers: Supplier[]
   onClose: () => void
   onSave: (message: string) => void
   userId: string
 }
 
-function ProductModal({ open, product, warehouses, onClose, onSave, userId }: ProductModalProps) {
+function ProductModal({ open, product, warehouses, suppliers, onClose, onSave, userId }: ProductModalProps) {
   const [formData, setFormData] = useState({
     name: product?.name || "",
     sku: product?.sku || "",
@@ -563,7 +617,8 @@ function ProductModal({ open, product, warehouses, onClose, onSave, userId }: Pr
     unit_price: product?.unit_price?.toString() || "",
     reorder_point: product?.reorder_point?.toString() || "",
     warehouse_id: product?.warehouse_id || "",
-    initial_stock: ""
+    initial_stock: "",
+    supplier_id: product?.supplier_id || ""
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -583,7 +638,8 @@ function ProductModal({ open, product, warehouses, onClose, onSave, userId }: Pr
         unit_price: product.unit_price?.toString() || "",
         reorder_point: product.reorder_point?.toString() || "",
         warehouse_id: product.warehouse_id || "",
-        initial_stock: ""
+        initial_stock: "",
+        supplier_id: product.supplier_id || ""
       })
     } else {
       const defaultWarehouse = warehouses.find((w) => w.is_default) || warehouses[0]
@@ -597,7 +653,8 @@ function ProductModal({ open, product, warehouses, onClose, onSave, userId }: Pr
         unit_price: "",
         reorder_point: "",
         warehouse_id: defaultWarehouse?.id || "",
-        initial_stock: ""
+        initial_stock: "",
+        supplier_id: ""
       })
     }
     setError("")
@@ -625,7 +682,8 @@ function ProductModal({ open, product, warehouses, onClose, onSave, userId }: Pr
         unit_price: formData.unit_price ? parseFloat(formData.unit_price) : null,
         reorder_point: formData.reorder_point ? parseInt(formData.reorder_point) : null,
         warehouse_id: formData.warehouse_id,
-        user_id: userId
+        user_id: userId,
+        supplier_id: formData.supplier_id || null
       }
 
       if (product) {
@@ -741,6 +799,25 @@ function ProductModal({ open, product, warehouses, onClose, onSave, userId }: Pr
               {warehouses.map((warehouse) => (
                 <MenuItem key={warehouse.id} value={warehouse.id}>
                   {warehouse.name} {warehouse.is_default && "(Default)"}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {/* Add this field in your product form dialog */}
+          <FormControl fullWidth sx={{ mb: 2.5 }}>
+            <InputLabel>Supplier</InputLabel>
+            <Select
+              value={formData.supplier_id}
+              label="Supplier"
+              onChange={(e) => setFormData({ ...formData, supplier_id: e.target.value })}
+            >
+              <MenuItem value="">
+                <em>None</em>
+              </MenuItem>
+              {suppliers.map((supplier) => (
+                <MenuItem key={supplier.id} value={supplier.id}>
+                  {supplier.name}
                 </MenuItem>
               ))}
             </Select>
