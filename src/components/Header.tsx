@@ -96,9 +96,13 @@ export default function Header() {
             >
               <ListItemText
                 primary={item.label}
-                primaryTypographyProps={{
-                  fontWeight: pathname === item.href ? 600 : 400,
-                  color: pathname === item.href ? "#667eea" : "text.primary"
+                slotProps={{
+                  primary: {
+                    sx: {
+                      fontWeight: pathname === item.href ? 600 : 400,
+                      color: pathname === item.href ? "#667eea" : "text.primary"
+                    }
+                  }
                 }}
               />
             </ListItemButton>

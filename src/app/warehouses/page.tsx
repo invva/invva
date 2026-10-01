@@ -281,7 +281,12 @@ export default function WarehousesPage() {
         }}
       >
         <Box>
-          <Typography variant={isMobile ? "h5" : "h4"} fontWeight={600}>
+          <Typography
+            variant={isMobile ? "h5" : "h4"}
+            sx={{
+              fontWeight: 600
+            }}
+          >
             Warehouses
           </Typography>
           <Typography variant="body2" color="textSecondary">
@@ -308,7 +313,6 @@ export default function WarehousesPage() {
           Add Warehouse
         </Button>
       </Box>
-
       {/* Search Bar */}
       <Box sx={{ mb: 3 }}>
         <TextField
@@ -320,15 +324,26 @@ export default function WarehousesPage() {
           sx={{ bgcolor: "white" }}
         />
       </Box>
-
       {/* Empty State */}
       {filteredWarehouses.length === 0 ? (
         <Paper sx={{ p: { xs: 4, sm: 8 }, textAlign: "center" }}>
           <WarehouseIcon sx={{ fontSize: 80, color: "text.secondary", mb: 2 }} />
-          <Typography variant="h6" color="text.secondary" gutterBottom>
+          <Typography
+            variant="h6"
+            gutterBottom
+            sx={{
+              color: "text.secondary"
+            }}
+          >
             {searchTerm ? "No warehouses found" : "No warehouses yet"}
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              mb: 3
+            }}
+          >
             {searchTerm ? "Try a different search term" : "Click 'Add Warehouse' to create your first warehouse"}
           </Typography>
         </Paper>
@@ -367,7 +382,12 @@ export default function WarehousesPage() {
                     <Box>
                       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
                         <WarehouseIcon color="primary" />
-                        <Typography variant="h6" fontWeight={600}>
+                        <Typography
+                          variant="h6"
+                          sx={{
+                            fontWeight: 600
+                          }}
+                        >
                           {warehouse.name}
                         </Typography>
                       </Box>
@@ -393,7 +413,12 @@ export default function WarehousesPage() {
                           <Typography variant="caption" color="textSecondary">
                             Products
                           </Typography>
-                          <Typography variant="h6" fontWeight="bold">
+                          <Typography
+                            variant="h6"
+                            sx={{
+                              fontWeight: "bold"
+                            }}
+                          >
                             {warehouse.total_products || 0}
                           </Typography>
                         </Grid>
@@ -401,7 +426,13 @@ export default function WarehousesPage() {
                           <Typography variant="caption" color="textSecondary">
                             Stock Value
                           </Typography>
-                          <Typography variant="h6" fontWeight="bold" color="success.main">
+                          <Typography
+                            variant="h6"
+                            sx={{
+                              fontWeight: "bold",
+                              color: "success.main"
+                            }}
+                          >
                             {formatCurrency(warehouse.total_stock_value || 0)}
                           </Typography>
                         </Grid>
@@ -497,7 +528,6 @@ export default function WarehousesPage() {
           ))}
         </Grid>
       )}
-
       {/* Add/Edit Modal */}
       <WarehouseModal
         open={showModal}
@@ -513,7 +543,6 @@ export default function WarehousesPage() {
           showSnackbar(message, "success")
         }}
       />
-
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialog.open} onClose={handleDeleteCancel} maxWidth="xs" fullWidth>
         <DialogTitle>Delete Warehouse?</DialogTitle>
@@ -537,7 +566,6 @@ export default function WarehousesPage() {
           </Button>
         </DialogActions>
       </Dialog>
-
       {/* Snackbar Notifications */}
       <Snackbar
         open={snackbar.open}
@@ -715,7 +743,12 @@ function WarehouseModal({ open, warehouse, onClose, onSave }: WarehouseModalProp
             borderColor: "divider"
           }}
         >
-          <Typography variant="h6" fontWeight={600}>
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 600
+            }}
+          >
             {warehouse ? "Edit Warehouse" : "Add New Warehouse"}
           </Typography>
           <IconButton onClick={onClose} size="small">
@@ -756,7 +789,9 @@ function WarehouseModal({ open, warehouse, onClose, onSave }: WarehouseModalProp
                 placeholder="Enter ZIP to auto-fill city/state"
                 value={formData.zip_code}
                 onChange={handleZipCodeChange}
-                inputProps={{ maxLength: 5 }}
+                slotProps={{
+                  htmlInput: { maxLength: 5 }
+                }}
               />
             </Grid>
 
@@ -789,8 +824,10 @@ function WarehouseModal({ open, warehouse, onClose, onSave }: WarehouseModalProp
                 label="State"
                 value={formData.state}
                 onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                SelectProps={{
-                  native: true
+                slotProps={{
+                  select: {
+                    native: true
+                  }
                 }}
               >
                 <option value="">Select State</option>

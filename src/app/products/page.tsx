@@ -283,10 +283,21 @@ export default function ProductsPage() {
           mb: 3
         }}
       >
-        <Typography variant={isMobile ? "h5" : "h4"} fontWeight={600}>
+        <Typography
+          variant={isMobile ? "h5" : "h4"}
+          sx={{
+            fontWeight: 600
+          }}
+        >
           Products
         </Typography>
-        <Box display="flex" gap={2} flexWrap="wrap">
+        <Box
+          sx={{
+            display: "flex",
+            gap: 2,
+            flexWrap: "wrap"
+          }}
+        >
           <FormControl size="small" sx={{ minWidth: 200 }}>
             <InputLabel>Filter by Warehouse</InputLabel>
             <Select
@@ -323,7 +334,6 @@ export default function ProductsPage() {
           </Button>
         </Box>
       </Box>
-
       {/* Search Bar */}
       <Box sx={{ mb: 2 }}>
         <TextField
@@ -335,17 +345,26 @@ export default function ProductsPage() {
           sx={{ bgcolor: "white" }}
         />
       </Box>
-
       {/* Empty State */}
       {filteredProducts.length === 0 ? (
         <Paper sx={{ p: { xs: 4, sm: 8 }, textAlign: "center" }}>
           <Typography variant="h1" sx={{ mb: 2 }}>
             📦
           </Typography>
-          <Typography color="text.secondary" gutterBottom>
+          <Typography
+            gutterBottom
+            sx={{
+              color: "text.secondary"
+            }}
+          >
             {searchTerm ? "No products found" : "No products yet"}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary"
+            }}
+          >
             {searchTerm ? "Try a different search term" : "Click 'Add Product' to get started"}
           </Typography>
         </Paper>
@@ -390,17 +409,32 @@ export default function ProductsPage() {
                       <TableCell>
                         {product.supplier ? (
                           <Box>
-                            <Typography variant="body2" fontWeight={500}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontWeight: 500
+                              }}
+                            >
                               {product.supplier.name}
                             </Typography>
                             {product.supplier.email && (
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  color: "text.secondary"
+                                }}
+                              >
                                 {product.supplier.email}
                               </Typography>
                             )}
                           </Box>
                         ) : (
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: "text.secondary"
+                            }}
+                          >
                             No supplier
                           </Typography>
                         )}
@@ -470,10 +504,24 @@ export default function ProductsPage() {
                       }}
                     >
                       <Box sx={{ flex: 1 }}>
-                        <Typography variant="h6" fontWeight={600} gutterBottom>
+                        <Typography
+                          variant="h6"
+                          gutterBottom
+                          sx={{
+                            fontWeight: 600
+                          }}
+                        >
                           {product.name}
                         </Typography>
-                        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 1, gap: 0.5 }}>
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          sx={{
+                            flexWrap: "wrap",
+                            mb: 1,
+                            gap: 0.5
+                          }}
+                        >
                           <Chip
                             icon={<WarehouseIcon />}
                             label={product.warehouses?.name || "N/A"}
@@ -492,21 +540,41 @@ export default function ProductsPage() {
                     </Box>
 
                     <Box sx={{ mb: 1 }}>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: "text.secondary"
+                        }}
+                      >
                         Price: <strong>{formatCurrency(product.unit_price)}</strong>
                       </Typography>
                       {product.sku && (
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: "text.secondary"
+                          }}
+                        >
                           SKU: {product.sku}
                         </Typography>
                       )}
                       {product.barcode && (
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: "text.secondary"
+                          }}
+                        >
                           Barcode: {product.barcode}
                         </Typography>
                       )}
                       {product.supplier && (
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: "text.secondary"
+                          }}
+                        >
                           Supplier: <strong>{product.supplier.name}</strong>
                         </Typography>
                       )}
@@ -541,7 +609,6 @@ export default function ProductsPage() {
           )}
         </>
       )}
-
       {/* Add/Edit Modal */}
       <ProductModal
         open={showAddModal}
@@ -560,7 +627,6 @@ export default function ProductsPage() {
         }}
         userId={user?.id || ""}
       />
-
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialog.open} onClose={handleDeleteCancel} maxWidth="xs" fullWidth>
         <DialogTitle>Delete Product?</DialogTitle>
@@ -579,7 +645,6 @@ export default function ProductsPage() {
           </Button>
         </DialogActions>
       </Dialog>
-
       {/* Snackbar Notifications */}
       <Snackbar
         open={snackbar.open}
@@ -754,7 +819,12 @@ function ProductModal({ open, product, warehouses, suppliers, onClose, onSave, u
             borderColor: "divider"
           }}
         >
-          <Typography variant="h6" fontWeight={600}>
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 600
+            }}
+          >
             {product ? "Edit Product" : "Add New Product"}
           </Typography>
           <IconButton onClick={onClose} size="small">

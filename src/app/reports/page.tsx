@@ -345,7 +345,14 @@ export default function ReportsPage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "80vh"
+          }}
+        >
           <CircularProgress />
         </Box>
       </DashboardLayout>
@@ -356,8 +363,18 @@ export default function ReportsPage() {
     <DashboardLayout>
       <Box sx={{ flexGrow: 1 }}>
         {/* Header */}
-        <Box mb={3}>
-          <Typography variant="h4" component="h1" fontWeight="bold">
+        <Box
+          sx={{
+            mb: 3
+          }}
+        >
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{
+              fontWeight: "bold"
+            }}
+          >
             Reports & Analytics
           </Typography>
           <Typography variant="body2" color="textSecondary">
@@ -383,7 +400,14 @@ export default function ReportsPage() {
           <TabPanel value={tabValue} index={0}>
             <Box sx={{ p: 3 }}>
               {/* Actions */}
-              <Stack direction="row" spacing={2} mb={3} justifyContent="space-between">
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  mb: 3,
+                  justifyContent: "space-between"
+                }}
+              >
                 <Button
                   variant="contained"
                   startIcon={generating ? <CircularProgress size={20} /> : <ReportIcon />}
@@ -409,14 +433,26 @@ export default function ReportsPage() {
 
               {/* Summary Cards */}
               {inventorySummary.length > 0 && (
-                <Grid container spacing={2} mb={3}>
+                <Grid
+                  container
+                  spacing={2}
+                  sx={{
+                    mb: 3
+                  }}
+                >
                   <Grid columns={{ xs: 12, md: 4 }}>
                     <Card>
                       <CardContent>
                         <Typography color="textSecondary" variant="body2">
                           Total Inventory Value
                         </Typography>
-                        <Typography variant="h4" fontWeight="bold" color="primary">
+                        <Typography
+                          variant="h4"
+                          color="primary"
+                          sx={{
+                            fontWeight: "bold"
+                          }}
+                        >
                           {formatCurrencyShort(totalInventoryValue, { currency: "USD", decimals: 2 })}
                         </Typography>
                       </CardContent>
@@ -428,7 +464,12 @@ export default function ReportsPage() {
                         <Typography color="textSecondary" variant="body2">
                           Total Products
                         </Typography>
-                        <Typography variant="h4" fontWeight="bold">
+                        <Typography
+                          variant="h4"
+                          sx={{
+                            fontWeight: "bold"
+                          }}
+                        >
                           {inventoryData.length}
                         </Typography>
                       </CardContent>
@@ -440,7 +481,12 @@ export default function ReportsPage() {
                         <Typography color="textSecondary" variant="body2">
                           Categories
                         </Typography>
-                        <Typography variant="h4" fontWeight="bold">
+                        <Typography
+                          variant="h4"
+                          sx={{
+                            fontWeight: "bold"
+                          }}
+                        >
                           {inventorySummary.length}
                         </Typography>
                       </CardContent>
@@ -588,7 +634,14 @@ export default function ReportsPage() {
               </Paper>
 
               {/* Actions */}
-              <Stack direction="row" spacing={2} mb={3} justifyContent="space-between">
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  mb: 3,
+                  justifyContent: "space-between"
+                }}
+              >
                 <Button
                   variant="contained"
                   startIcon={generating ? <CircularProgress size={20} /> : <ReportIcon />}
@@ -633,7 +686,12 @@ export default function ReportsPage() {
                             <Typography variant="body2">{formatDate(movement.movement_date)}</Typography>
                           </TableCell>
                           <TableCell>
-                            <Typography variant="body2" fontWeight="medium">
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontWeight: "medium"
+                              }}
+                            >
                               {movement.product_name}
                             </Typography>
                             <Typography variant="caption" color="textSecondary">
@@ -648,8 +706,8 @@ export default function ReportsPage() {
                                 movement.movement_type === "IN"
                                   ? "success"
                                   : movement.movement_type === "OUT"
-                                  ? "error"
-                                  : "warning"
+                                    ? "error"
+                                    : "warning"
                               }
                             />
                           </TableCell>
@@ -684,7 +742,14 @@ export default function ReportsPage() {
           <TabPanel value={tabValue} index={2}>
             <Box sx={{ p: 3 }}>
               {/* Actions */}
-              <Stack direction="row" spacing={2} mb={3} justifyContent="space-between">
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  mb: 3,
+                  justifyContent: "space-between"
+                }}
+              >
                 <Button
                   variant="contained"
                   startIcon={generating ? <CircularProgress size={20} /> : <ReportIcon />}
@@ -731,7 +796,12 @@ export default function ReportsPage() {
                         {lowStockData.map((item) => (
                           <TableRow key={item.id} hover>
                             <TableCell>
-                              <Typography variant="body2" fontWeight="medium">
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  fontWeight: "medium"
+                                }}
+                              >
                                 {item.name}
                               </Typography>
                             </TableCell>
@@ -770,7 +840,13 @@ export default function ReportsPage() {
                   </TableContainer>
                 </>
               ) : generating ? (
-                <Box display="flex" justifyContent="center" py={4}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    py: 4
+                  }}
+                >
                   <CircularProgress />
                 </Box>
               ) : (

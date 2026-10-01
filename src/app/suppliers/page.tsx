@@ -275,7 +275,14 @@ export default function SuppliersPage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "400px"
+          }}
+        >
           <CircularProgress />
         </Box>
       </DashboardLayout>
@@ -286,8 +293,23 @@ export default function SuppliersPage() {
     <DashboardLayout>
       <Box sx={{ p: { xs: 2, sm: 3 } }}>
         {/* Header */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={2}>
-          <Box display="flex" alignItems="center" gap={1}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+            flexWrap: "wrap",
+            gap: 2
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1
+            }}
+          >
             <BusinessIcon sx={{ fontSize: 32, color: "primary.main" }} />
             <Typography variant="h4" component="h1">
               Suppliers
@@ -336,7 +358,12 @@ export default function SuppliersPage() {
           <Grid columns={{ xs: 6, md: 3 }}>
             <Card>
               <CardContent>
-                <Typography color="text.secondary" variant="body2">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: "text.secondary"
+                  }}
+                >
                   Total Suppliers
                 </Typography>
                 <Typography variant="h4">{suppliers.length}</Typography>
@@ -346,10 +373,20 @@ export default function SuppliersPage() {
           <Grid columns={{ xs: 6, md: 3 }}>
             <Card>
               <CardContent>
-                <Typography color="text.secondary" variant="body2">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: "text.secondary"
+                  }}
+                >
                   Active
                 </Typography>
-                <Typography variant="h4" color="success.main">
+                <Typography
+                  variant="h4"
+                  sx={{
+                    color: "success.main"
+                  }}
+                >
                   {suppliers.filter((s) => s.is_active).length}
                 </Typography>
               </CardContent>
@@ -358,10 +395,20 @@ export default function SuppliersPage() {
           <Grid columns={{ xs: 6, md: 3 }}>
             <Card>
               <CardContent>
-                <Typography color="text.secondary" variant="body2">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: "text.secondary"
+                  }}
+                >
                   Inactive
                 </Typography>
-                <Typography variant="h4" color="text.secondary">
+                <Typography
+                  variant="h4"
+                  sx={{
+                    color: "text.secondary"
+                  }}
+                >
                   {suppliers.filter((s) => !s.is_active).length}
                 </Typography>
               </CardContent>
@@ -370,7 +417,12 @@ export default function SuppliersPage() {
           <Grid columns={{ xs: 6, md: 3 }}>
             <Card>
               <CardContent>
-                <Typography color="text.secondary" variant="body2">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: "text.secondary"
+                  }}
+                >
                   Filtered Results
                 </Typography>
                 <Typography variant="h4">{filteredSuppliers.length}</Typography>
@@ -383,10 +435,22 @@ export default function SuppliersPage() {
         {filteredSuppliers.length === 0 ? (
           <Paper sx={{ p: 4, textAlign: "center" }}>
             <BusinessIcon sx={{ fontSize: 64, color: "text.secondary", mb: 2 }} />
-            <Typography variant="h6" color="text.secondary" gutterBottom>
+            <Typography
+              variant="h6"
+              gutterBottom
+              sx={{
+                color: "text.secondary"
+              }}
+            >
               {searchTerm || filterStatus !== "ALL" ? "No suppliers found" : "No suppliers yet"}
             </Typography>
-            <Typography variant="body2" color="text.secondary" mb={2}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                mb: 2
+              }}
+            >
               {searchTerm || filterStatus !== "ALL"
                 ? "Try adjusting your search or filters"
                 : "Get started by adding your first supplier"}
@@ -416,11 +480,21 @@ export default function SuppliersPage() {
                   <TableRow key={supplier.id} hover>
                     <TableCell>
                       <Box>
-                        <Typography variant="body1" fontWeight={500}>
+                        <Typography
+                          variant="body1"
+                          sx={{
+                            fontWeight: 500
+                          }}
+                        >
                           {supplier.name}
                         </Typography>
                         {supplier.tax_id && (
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: "text.secondary"
+                            }}
+                          >
                             Tax ID: {supplier.tax_id}
                           </Typography>
                         )}
@@ -430,13 +504,26 @@ export default function SuppliersPage() {
                     <TableCell>
                       <Box>
                         {supplier.email && (
-                          <Box display="flex" alignItems="center" gap={0.5} mb={0.5}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 0.5,
+                              mb: 0.5
+                            }}
+                          >
                             <EmailIcon fontSize="small" sx={{ color: "text.secondary" }} />
                             <Typography variant="body2">{supplier.email}</Typography>
                           </Box>
                         )}
                         {supplier.phone && (
-                          <Box display="flex" alignItems="center" gap={0.5}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 0.5
+                            }}
+                          >
                             <PhoneIcon fontSize="small" sx={{ color: "text.secondary" }} />
                             <Typography variant="body2">{supplier.phone}</Typography>
                           </Box>
