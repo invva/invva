@@ -41,6 +41,7 @@ import {
 
 // utils
 import { formatCurrencyShort, formatCurrency } from "@/utils/format-currency.util"
+import { toCsv } from "@/utils/csv.util"
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -310,20 +311,8 @@ export default function ReportsPage() {
       return
     }
 
-    const headers = Object.keys(data[0])
-    const csvContent = [
-      headers.join(","),
-      ...data.map((row) =>
-        headers
-          .map((header) => {
-            const value = row[header]
-            return typeof value === "string" && value.includes(",") ? `"${value}"` : value
-          })
-          .join(",")
-      )
-    ].join("\n")
-
-    const blob = new Blob([csvContent], { type: "text/csv" })
+    // The BOM makes Excel read the file as UTF-8 (accented names otherwise come out garbled).
+    const blob = new Blob(["﻿" + toCsv(data)], { type: "text/csv;charset=utf-8" })
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
