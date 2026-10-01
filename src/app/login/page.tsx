@@ -147,10 +147,22 @@ export default function LoginPage() {
         <Paper elevation={6} sx={{ borderRadius: 3, overflow: "hidden" }}>
           <Box sx={{ p: 4 }}>
             {/* Header */}
-            <Typography variant="h5" fontWeight={600} gutterBottom>
+            <Typography
+              variant="h5"
+              gutterBottom
+              sx={{
+                fontWeight: 600
+              }}
+            >
               {step === "email" ? "Welcome back" : "Enter code"}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                mb: 3
+              }}
+            >
               {step === "email" ? "Sign in with your email to continue" : `We sent a 6-digit code to ${email}`}
             </Typography>
 
@@ -287,7 +299,15 @@ export default function LoginPage() {
             )}
 
             {/* Footer Text */}
-            <Typography variant="caption" color="text.secondary" sx={{ display: "block", textAlign: "center", mt: 3 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                display: "block",
+                textAlign: "center",
+                mt: 3
+              }}
+            >
               {step === "email"
                 ? "We'll email you a 6-digit code. No password needed."
                 : "Check your email for the code. It expires in 10 minutes."}

@@ -403,7 +403,14 @@ export default function StockMovementsPage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "400px"
+          }}
+        >
           <CircularProgress />
         </Box>
       </DashboardLayout>
@@ -415,17 +422,25 @@ export default function StockMovementsPage() {
       <Box sx={{ p: { xs: 2, sm: 3 } }}>
         {/* Header */}
         <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems={{ xs: "flex-start", sm: "center" }}
-          mb={3}
-          flexDirection={{ xs: "column", sm: "row" }}
-          gap={2}
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: { xs: "flex-start", sm: "center" },
+            mb: 3,
+            flexDirection: { xs: "column", sm: "row" },
+            gap: 2
+          }}
         >
           <Typography variant="h4" component="h1">
             Stock Movements
           </Typography>
-          <Box display="flex" gap={2} flexWrap="wrap">
+          <Box
+            sx={{
+              display: "flex",
+              gap: 2,
+              flexWrap: "wrap"
+            }}
+          >
             <FormControl size="small" sx={{ minWidth: 200 }}>
               <InputLabel>Filter by Warehouse</InputLabel>
               <Select
@@ -479,16 +494,33 @@ export default function StockMovementsPage() {
             {filteredMovements.map((movement) => (
               <Card key={movement.id} sx={{ mb: 2 }}>
                 <CardContent>
-                  <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      mb: 2
+                    }}
+                  >
                     <Box>
                       <Typography variant="h6" gutterBottom>
                         {movement.products?.name}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: "text.secondary"
+                        }}
+                      >
                         SKU: {movement.products?.sku}
                       </Typography>
                       {movement.products?.supplier && (
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: "text.secondary"
+                          }}
+                        >
                           Supplier: {movement.products.supplier.name}
                         </Typography>
                       )}
@@ -500,7 +532,11 @@ export default function StockMovementsPage() {
                     />
                   </Box>
 
-                  <Box mb={2}>
+                  <Box
+                    sx={{
+                      mb: 2
+                    }}
+                  >
                     <Chip
                       icon={<WarehouseIcon />}
                       label={movement.warehouses?.name || "N/A"}
@@ -526,7 +562,12 @@ export default function StockMovementsPage() {
                     )}
                   </Box>
 
-                  <Box display="flex" gap={1}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: 1
+                    }}
+                  >
                     <Button size="small" startIcon={<EditIcon />} onClick={() => handleOpenDialog(movement)} fullWidth>
                       Edit
                     </Button>
@@ -577,11 +618,21 @@ export default function StockMovementsPage() {
                     {!isTablet && (
                       <TableCell>
                         {movement.products?.supplier ? (
-                          <Typography variant="body2" fontWeight={500}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight: 500
+                            }}
+                          >
                             {movement.products.supplier.name}
                           </Typography>
                         ) : (
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: "text.secondary"
+                            }}
+                          >
                             -
                           </Typography>
                         )}
@@ -620,17 +671,26 @@ export default function StockMovementsPage() {
 
         {filteredMovements.length === 0 && (
           <Paper sx={{ p: 4, textAlign: "center" }}>
-            <Typography color="text.secondary">
+            <Typography
+              sx={{
+                color: "text.secondary"
+              }}
+            >
               No stock movements found. Click &ldquo;Add Movement&rdquo; to create one.
             </Typography>
           </Paper>
         )}
       </Box>
-
       {/* Add/Edit Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth fullScreen={isMobile}>
         <DialogTitle>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center"
+            }}
+          >
             {editingMovement ? "Edit Stock Movement" : "Add Stock Movement"}
             {isMobile && (
               <IconButton onClick={handleCloseDialog}>
@@ -671,7 +731,14 @@ export default function StockMovementsPage() {
                 ))}
               </Select>
               {!formData.warehouse_id && (
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.5 }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                    mt: 0.5,
+                    ml: 1.5
+                  }}
+                >
                   Select a warehouse first
                 </Typography>
               )}
@@ -702,12 +769,14 @@ export default function StockMovementsPage() {
               required
               value={formData.quantity}
               onChange={(e) => setFormData({ ...formData, quantity: parseFloat(e.target.value) })}
-              inputProps={{ min: 0, step: 1 }}
               helperText={
                 formData.movement_type === "ADJUSTMENT"
                   ? "Enter positive number to add, negative to subtract"
                   : "Enter quantity"
               }
+              slotProps={{
+                htmlInput: { min: 0, step: 1 }
+              }}
             />
 
             <TextField
@@ -717,7 +786,9 @@ export default function StockMovementsPage() {
               required
               value={formData.movement_date}
               onChange={(e) => setFormData({ ...formData, movement_date: e.target.value })}
-              InputLabelProps={{ shrink: true }}
+              slotProps={{
+                inputLabel: { shrink: true }
+              }}
             />
 
             <TextField
@@ -746,7 +817,6 @@ export default function StockMovementsPage() {
           </Button>
         </DialogActions>
       </Dialog>
-
       {/* Delete Confirmation Dialog */}
       <Dialog open={openDeleteDialog} onClose={handleCloseDeleteDialog}>
         <DialogTitle>Confirm Delete</DialogTitle>
@@ -765,7 +835,6 @@ export default function StockMovementsPage() {
           </Button>
         </DialogActions>
       </Dialog>
-
       {/* Snackbar for notifications */}
       <Snackbar
         open={snackbar.open}

@@ -364,7 +364,14 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "80vh"
+          }}
+        >
           <CircularProgress />
         </Box>
       </DashboardLayout>
@@ -375,11 +382,32 @@ export default function DashboardPage() {
     <DashboardLayout>
       <Box sx={{ flexGrow: 1 }}>
         {/* Header */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={2}>
-          <Typography variant="h4" component="h1" fontWeight="bold">
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+            flexWrap: "wrap",
+            gap: 2
+          }}
+        >
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{
+              fontWeight: "bold"
+            }}
+          >
             Dashboard
           </Typography>
-          <Box display="flex" gap={2} alignItems="center">
+          <Box
+            sx={{
+              display: "flex",
+              gap: 2,
+              alignItems: "center"
+            }}
+          >
             <FormControl size="small" sx={{ minWidth: 200 }}>
               <InputLabel>Filter by Warehouse</InputLabel>
               <Select
@@ -403,7 +431,11 @@ export default function DashboardPage() {
 
         {/* Selected Warehouse Badge */}
         {selectedWarehouse !== "all" && (
-          <Box mb={3}>
+          <Box
+            sx={{
+              mb: 3
+            }}
+          >
             <Chip
               icon={<WarehouseIcon />}
               label={`Viewing: ${warehouses.find((w) => w.id === selectedWarehouse)?.name || "Unknown Warehouse"}`}
@@ -414,18 +446,35 @@ export default function DashboardPage() {
         )}
 
         {/* Stats Cards */}
-        <Grid container spacing={3} mb={3}>
+        <Grid
+          container
+          spacing={3}
+          sx={{
+            mb: 3
+          }}
+        >
           {/* Total Products */}
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card elevation={2}>
               <CardContent>
-                <Box display="flex" alignItems="center" mb={2}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    mb: 2
+                  }}
+                >
                   <InventoryIcon color="primary" sx={{ fontSize: 40, mr: 2 }} />
                   <Box>
                     <Typography color="textSecondary" variant="body2">
                       Total Products
                     </Typography>
-                    <Typography variant="h4" fontWeight="bold">
+                    <Typography
+                      variant="h4"
+                      sx={{
+                        fontWeight: "bold"
+                      }}
+                    >
                       {stats.totalProducts}
                     </Typography>
                   </Box>
@@ -441,13 +490,25 @@ export default function DashboardPage() {
               sx={{ borderLeft: stats.lowStockProducts > 0 ? "4px solid" : "none", borderColor: "error.main" }}
             >
               <CardContent>
-                <Box display="flex" alignItems="center" mb={2}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    mb: 2
+                  }}
+                >
                   <WarningIcon color="error" sx={{ fontSize: 40, mr: 2 }} />
                   <Box>
                     <Typography color="textSecondary" variant="body2">
                       Low Stock Items
                     </Typography>
-                    <Typography variant="h4" fontWeight="bold" color="error">
+                    <Typography
+                      variant="h4"
+                      color="error"
+                      sx={{
+                        fontWeight: "bold"
+                      }}
+                    >
                       {stats.lowStockProducts}
                     </Typography>
                   </Box>
@@ -460,13 +521,24 @@ export default function DashboardPage() {
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card elevation={2}>
               <CardContent>
-                <Box display="flex" alignItems="center" mb={2}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    mb: 2
+                  }}
+                >
                   <ReportIcon color="success" sx={{ fontSize: 40, mr: 2 }} />
                   <Box>
                     <Typography color="textSecondary" variant="body2">
                       Total Stock Value
                     </Typography>
-                    <Typography variant="h4" fontWeight="bold">
+                    <Typography
+                      variant="h4"
+                      sx={{
+                        fontWeight: "bold"
+                      }}
+                    >
                       {formatCurrencyShort(stats.totalStockValue, { currency: "USD", decimals: 2 })}
                     </Typography>
                   </Box>
@@ -479,13 +551,24 @@ export default function DashboardPage() {
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card elevation={2}>
               <CardContent>
-                <Box display="flex" alignItems="center" mb={2}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    mb: 2
+                  }}
+                >
                   <AdjustmentIcon color="info" sx={{ fontSize: 40, mr: 2 }} />
                   <Box>
                     <Typography color="textSecondary" variant="body2">
                       Movements (7 days)
                     </Typography>
-                    <Typography variant="h4" fontWeight="bold">
+                    <Typography
+                      variant="h4"
+                      sx={{
+                        fontWeight: "bold"
+                      }}
+                    >
                       {stats.recentMovements}
                     </Typography>
                   </Box>
@@ -500,7 +583,13 @@ export default function DashboardPage() {
           {/* Low Stock Products */}
           <Grid size={{ xs: 12, md: 6, lg: 4 }}>
             <Paper elevation={2} sx={{ p: 3, height: "100%" }}>
-              <Typography variant="h6" fontWeight="bold" gutterBottom>
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{
+                  fontWeight: "bold"
+                }}
+              >
                 Low Stock Alert
               </Typography>
               <Divider sx={{ mb: 2 }} />
@@ -522,14 +611,25 @@ export default function DashboardPage() {
                       {lowStockProducts.map((product) => (
                         <TableRow key={product.id} hover>
                           <TableCell>
-                            <Typography variant="body2" fontWeight="medium">
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontWeight: "medium"
+                              }}
+                            >
                               {product.name}
                             </Typography>
                             <Typography variant="caption" color="textSecondary">
                               {product.sku}
                             </Typography>
                             {selectedWarehouse === "all" && product.warehouses && (
-                              <Typography variant="caption" display="block" color="primary">
+                              <Typography
+                                variant="caption"
+                                color="primary"
+                                sx={{
+                                  display: "block"
+                                }}
+                              >
                                 📦 {product.warehouses.name}
                               </Typography>
                             )}
@@ -562,7 +662,13 @@ export default function DashboardPage() {
           {/* Recent Movements */}
           <Grid size={{ xs: 12, md: 6, lg: 4 }}>
             <Paper elevation={1} sx={{ p: 3, height: "100%", display: "flex", flexDirection: "column" }}>
-              <Typography variant="h6" fontWeight="bold" gutterBottom>
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{
+                  fontWeight: "bold"
+                }}
+              >
                 Recent Activity
               </Typography>
               <Divider sx={{ mb: 2 }} />
@@ -591,10 +697,21 @@ export default function DashboardPage() {
                         }
                       }}
                     >
-                      <Stack direction="row" spacing={2} alignItems="center">
+                      <Stack
+                        direction="row"
+                        spacing={2}
+                        sx={{
+                          alignItems: "center"
+                        }}
+                      >
                         <Box>{getMovementIcon(movement.movement_type)}</Box>
                         <Box sx={{ flexGrow: 1 }}>
-                          <Typography variant="body2" fontWeight="medium">
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight: "medium"
+                            }}
+                          >
                             {movement.product_name}
                           </Typography>
                           <Typography variant="caption" color="textSecondary">
@@ -602,12 +719,22 @@ export default function DashboardPage() {
                             {movement.reference_number && ` • Ref: ${movement.reference_number}`}
                           </Typography>
                           {selectedWarehouse === "all" && (
-                            <Typography variant="caption" display="block" color="primary">
+                            <Typography
+                              variant="caption"
+                              color="primary"
+                              sx={{
+                                display: "block"
+                              }}
+                            >
                               📦 {movement.warehouse_name}
                             </Typography>
                           )}
                         </Box>
-                        <Box textAlign="right">
+                        <Box
+                          sx={{
+                            textAlign: "right"
+                          }}
+                        >
                           <Chip
                             label={`${movement.movement_type === "OUT" ? "-" : "+"}${movement.quantity}`}
                             size="small"
@@ -615,7 +742,13 @@ export default function DashboardPage() {
                               getMovementColor(movement.movement_type) as "success" | "warning" | "error" | "default"
                             }
                           />
-                          <Typography variant="caption" display="block" color="textSecondary">
+                          <Typography
+                            variant="caption"
+                            color="textSecondary"
+                            sx={{
+                              display: "block"
+                            }}
+                          >
                             {formatDate(movement.movement_date)}
                           </Typography>
                         </Box>
@@ -632,7 +765,13 @@ export default function DashboardPage() {
             <Stack spacing={3}>
               {/* Quick Actions Card */}
               <Paper elevation={2} sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
+                <Typography
+                  variant="h6"
+                  gutterBottom
+                  sx={{
+                    fontWeight: "bold"
+                  }}
+                >
                   Quick Actions
                 </Typography>
                 <Divider sx={{ mb: 2 }} />
@@ -678,7 +817,13 @@ export default function DashboardPage() {
 
               {/* Stock Summary Card */}
               <Paper elevation={2} sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
+                <Typography
+                  variant="h6"
+                  gutterBottom
+                  sx={{
+                    fontWeight: "bold"
+                  }}
+                >
                   Stock Summary
                   {selectedWarehouse !== "all" && (
                     <Chip
@@ -694,7 +839,12 @@ export default function DashboardPage() {
                     <Typography variant="body2" color="textSecondary" gutterBottom>
                       Total Products
                     </Typography>
-                    <Typography variant="h4" fontWeight="bold">
+                    <Typography
+                      variant="h4"
+                      sx={{
+                        fontWeight: "bold"
+                      }}
+                    >
                       {stats.totalProducts}
                     </Typography>
                   </Box>
@@ -703,7 +853,13 @@ export default function DashboardPage() {
                     <Typography variant="body2" color="textSecondary" gutterBottom>
                       Inventory Value
                     </Typography>
-                    <Typography variant="h5" fontWeight="bold" color="success.main">
+                    <Typography
+                      variant="h5"
+                      sx={{
+                        fontWeight: "bold",
+                        color: "success.main"
+                      }}
+                    >
                       {formatCurrencyShort(stats.totalStockValue, { currency: "USD", decimals: 2 })}
                     </Typography>
                   </Box>

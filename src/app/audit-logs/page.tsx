@@ -133,7 +133,13 @@ export default function AuditLogsPage() {
     if (log.action === "INSERT") {
       return (
         <Box>
-          <Typography variant="body2" fontWeight="bold" gutterBottom>
+          <Typography
+            variant="body2"
+            gutterBottom
+            sx={{
+              fontWeight: "bold"
+            }}
+          >
             New Record Created:
           </Typography>
           {Object.entries(log.new_data || {}).map(([key, value]) => (
@@ -148,7 +154,13 @@ export default function AuditLogsPage() {
     if (log.action === "DELETE") {
       return (
         <Box>
-          <Typography variant="body2" fontWeight="bold" gutterBottom>
+          <Typography
+            variant="body2"
+            gutterBottom
+            sx={{
+              fontWeight: "bold"
+            }}
+          >
             Deleted Record:
           </Typography>
           {Object.entries(log.old_data || {}).map(([key, value]) => (
@@ -163,7 +175,13 @@ export default function AuditLogsPage() {
     if (log.action === "UPDATE" && log.changed_fields && log.changed_fields.length > 0) {
       return (
         <Box>
-          <Typography variant="body2" fontWeight="bold" gutterBottom>
+          <Typography
+            variant="body2"
+            gutterBottom
+            sx={{
+              fontWeight: "bold"
+            }}
+          >
             Changed Fields:
           </Typography>
           {log.changed_fields.map((field) => (
@@ -174,7 +192,13 @@ export default function AuditLogsPage() {
               <Typography variant="body2" color="error" sx={{ pl: 2 }}>
                 Old: {String(log.old_data?.[field] || "null")}
               </Typography>
-              <Typography variant="body2" color="success.main" sx={{ pl: 2 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "success.main",
+                  pl: 2
+                }}
+              >
                 New: {String(log.new_data?.[field] || "null")}
               </Typography>
             </Box>
@@ -208,7 +232,13 @@ export default function AuditLogsPage() {
     if (logsToRender.length === 0) {
       return (
         <Paper sx={{ p: 3, textAlign: "center" }}>
-          <Typography color="text.secondary">No audit logs found</Typography>
+          <Typography
+            sx={{
+              color: "text.secondary"
+            }}
+          >
+            No audit logs found
+          </Typography>
         </Paper>
       )
     }
@@ -219,7 +249,14 @@ export default function AuditLogsPage() {
           {logsToRender.map((log) => (
             <Card key={log.id} sx={{ mb: 2 }}>
               <CardContent>
-                <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    mb: 2
+                  }}
+                >
                   <Box>
                     <Chip
                       label={log.action}
@@ -227,11 +264,21 @@ export default function AuditLogsPage() {
                       size="small"
                       sx={{ mb: 1 }}
                     />
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: "text.secondary"
+                      }}
+                    >
                       {formatTableName(log.table_name)}
                     </Typography>
                   </Box>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary"
+                    }}
+                  >
                     {new Date(log.created_at).toLocaleString()}
                   </Typography>
                 </Box>
@@ -280,7 +327,13 @@ export default function AuditLogsPage() {
                   />
                 </TableCell>
                 <TableCell>
-                  <Box display="flex" alignItems="center" gap={1}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1
+                    }}
+                  >
                     {getTableIcon(log.table_name)}
                     {formatTableName(log.table_name)}
                   </Box>
@@ -310,7 +363,14 @@ export default function AuditLogsPage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "400px"
+          }}
+        >
           <CircularProgress />
         </Box>
       </DashboardLayout>
@@ -321,7 +381,13 @@ export default function AuditLogsPage() {
     <DashboardLayout>
       <Box sx={{ p: { xs: 2, sm: 3 } }}>
         {/* Header */}
-        <Typography variant="h4" component="h1" mb={3}>
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{
+            mb: 3
+          }}
+        >
           Audit Logs
         </Typography>
 
@@ -383,25 +449,45 @@ export default function AuditLogsPage() {
           </Typography>
           <Grid container spacing={2}>
             <Grid columns={{ xs: 6, sm: 3 }}>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary"
+                }}
+              >
                 Total Logs
               </Typography>
               <Typography variant="h6">{logs.length}</Typography>
             </Grid>
             <Grid columns={{ xs: 6, sm: 3 }}>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary"
+                }}
+              >
                 Products
               </Typography>
               <Typography variant="h6">{productLogs.length}</Typography>
             </Grid>
             <Grid columns={{ xs: 6, sm: 3 }}>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary"
+                }}
+              >
                 Movements
               </Typography>
               <Typography variant="h6">{movementLogs.length}</Typography>
             </Grid>
             <Grid columns={{ xs: 6, sm: 3 }}>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary"
+                }}
+              >
                 Other
               </Typography>
               <Typography variant="h6">{otherLogs.length}</Typography>
